@@ -1,0 +1,114 @@
+<div class="results-header" aria-live="polite" aria-atomic="true">
+  <div class="results-count">
+    {% if total == 0 %}
+      No jobs found
+    {% elif total == 1 %}
+      <strong>1</strong> job
+    {% else %}
+      <strong>{{ total }}</strong> jobs
+    {% endif %}
+    {% if filters.q %}
+      matching &ldquo;{{ filters.q }}&rdquo;
+    {% endif %}
+  </div>
+  <span id="search-spinner" class="htmx-indicator text-muted text-sm">Searching…</span>
+</div>
+
+{% if jobs %}
+  <div class="job-list" role="list">
+    {% for job in jobs %}
+    <a href="/jobs/{{ job.id }}" class="job-card" role="listitem">
+      <div class="job-card__top">
+        <div>
+          <div class="job-card__title">{{ job.job_title }}</div>
+          <div class="job-card__company">
+            {% if job.company %}
+              <a href="/companies/{{ job.company_id }}" onclick="event.stopPropagation()">
+                {{ job.company.common_name }}
+              </a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="job-card__badges">
+          {% if job.company and job.company.is_scraped %}
+            <span class="badge badge--scraped" title="Sourced by scraper">Scraped</span>
+          {% endif %}
+          {% if job.office_location %}
+            {% if job.office_location.name|lower == 'remote' %}
+              <span class="badge badge--remote">Remote</span>
+            {% elif job.office_location.name|lower == 'hybrid' %}
+              <span class="badge badge--hybrid">Hybrid</span>
+            {% endif %}
+          {% endif %}
+          {% if job.date_posted and (now().date() - job.date_posted).days <= 3 %}
+            <span class="badge badge--new">New</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="job-card__meta">
+        {% if job.city %}
+          <span class="job-card__meta-item">📍 {{ job.city.city_name }}</span>
+        {% endif %}
+        {% if job.job_type %}
+          <span class="job-card__meta-item">{{ job.job_type.name }}</span>
+        {% endif %}
+        {% if job.minimum_salary %}
+          <span class="job-card__meta-item">
+            ${{ "{:,.0f}".format(job.minimum_salary) }}
+            {% if job.maximum_salary %} – ${{ "{:,.0f}".format(job.maximum_salary) }}{% endif %}
+            {% if job.pay_frequency %}/{{ job.pay_frequency }}{% endif %}
+          </span>
+        {% endif %}
+        {% if job.date_posted %}
+          <span class="job-card__meta-item">{{ job.date_posted.strftime('%b %-d') }}</span>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if total_pages > 1 %}
+  <nav class="pagination" aria-label="Pagination">
+    {% set base_params = [] %}
+    {% if filters.q %}{% set _ = base_params.append('q=' ~ filters.q|urlencode) %}{% endif %}
+    {% if filters.city_id %}{% set _ = base_params.append('city_id=' ~ filters.city_id) %}{% endif %}
+    {% if filters.function_id %}{% set _ = base_params.append('function_id=' ~ filters.function_id) %}{% endif %}
+    {% if filters.job_type_id %}{% set _ = base_params.append('job_type_id=' ~ filters.job_type_id) %}{% endif %}
+    {% if filters.office_location_id %}{% set _ = base_params.append('office_location_id=' ~ filters.office_location_id) %}{% endif %}
+    {% if filters.date_posted %}{% set _ = base_params.append('date_posted=' ~ filters.date_posted) %}{% endif %}
+    {% set qstr = base_params | join('&') %}
+
+    {% if page > 1 %}
+      <a href="/jobs?{{ qstr }}&page={{ page - 1 }}" class="pagination__btn"
+         hx-get="/jobs?{{ qstr }}&page={{ page - 1 }}" hx-target="#job-results" hx-push-url="true">
+        &larr; Previous
+      </a>
+    {% else %}
+      <span class="pagination__btn pagination__btn--disabled">&larr; Previous</span>
+    {% endif %}
+
+    <span class="text-muted text-sm">Page {{ page }} of {{ total_pages }}</span>
+
+    {% if page < total_pages %}
+      <a href="/jobs?{{ qstr }}&page={{ page + 1 }}" class="pagination__btn"
+         hx-get="/jobs?{{ qstr }}&page={{ page + 1 }}" hx-target="#job-results" hx-push-url="true">
+        Next &rarr;
+      </a>
+    {% else %}
+      <span class="pagination__btn pagination__btn--disabled">Next &rarr;</span>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+{% else %}
+  <div class="empty-state">
+    <div class="empty-state__title">No jobs found</div>
+    <div class="empty-state__text">
+      {% if filters.q or filters.city_id or filters.function_id %}
+        Try adjusting your filters or <a href="/jobs">clear all filters</a>.
+      {% else %}
+        Check back soon — new jobs are added regularly.
+      {% endif %}
+    </div>
+  </div>
+{% endif %}

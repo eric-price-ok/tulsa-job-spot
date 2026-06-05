@@ -1,0 +1,26 @@
+services:
+  app:
+    command: >
+      gunicorn app.main:app
+      -k uvicorn.workers.UvicornWorker
+      -w 4
+      --bind 0.0.0.0:8000
+      --access-logfile -
+      --error-logfile -
+    restart: unless-stopped
+    volumes: []
+
+  worker:
+    restart: unless-stopped
+    volumes: []
+
+  db:
+    ports: []
+    restart: unless-stopped
+
+  redis:
+    ports: []
+    restart: unless-stopped
+
+  caddy:
+    restart: unless-stopped

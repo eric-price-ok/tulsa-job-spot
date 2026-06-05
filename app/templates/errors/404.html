@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Page Not Found{% endblock %}
+{% block content %}
+<div class="empty-state" style="padding:5rem 1rem">
+  <div class="empty-state__title">Page not found</div>
+  <div class="empty-state__text">
+    The page you're looking for doesn't exist.
+    <br><br>
+    <a href="/jobs" class="btn btn--primary">Browse jobs</a>
+  </div>
+</div>
+{% endblock %}

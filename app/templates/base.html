@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ title or settings.SITE_NAME }}{% endblock %} — {{ settings.SITE_NAME }}</title>
+  <meta name="description" content="{{ settings.SITE_TAGLINE }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<nav class="nav" aria-label="Main navigation">
+  <div class="nav__inner">
+    <a href="/" class="nav__logo">{{ settings.SITE_NAME }}</a>
+
+    <div class="nav__links">
+      <a href="/jobs" class="nav__link">Browse Jobs</a>
+    </div>
+
+    <div class="nav__actions">
+      {% if current_user %}
+        <span class="nav__user">
+          {% if current_user.avatar_url %}
+            <img src="{{ current_user.avatar_url }}" alt="" class="nav__avatar">
+          {% endif %}
+          {{ current_user.display_name }}
+        </span>
+        {% if current_user.is_staff %}
+          <a href="/admin" class="btn btn--outline btn--sm">Admin</a>
+        {% endif %}
+        <form method="POST" action="/auth/logout" style="margin:0">
+          <button type="submit" class="btn btn--ghost btn--sm">Sign out</button>
+        </form>
+      {% else %}
+        {% if enabled_providers %}
+          <a href="/auth/login" class="btn btn--primary btn--sm">Sign in</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<main id="main-content">
+  {% if request.query_params.get('error') %}
+    <div class="container">
+      <div class="flash flash--error" role="alert">
+        {% set err = request.query_params.get('error') %}
+        {% if err == 'oauth_failed' %}
+          Sign-in failed. Please try again.
+        {% elif err == 'no_email' %}
+          We couldn't retrieve your email from the sign-in provider.
+        {% elif err == 'email_conflict' %}
+          This email is already registered with a different sign-in method.
+        {% else %}
+          Something went wrong. Please try again.
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer" aria-label="Site footer">
+  <div class="container">
+    <a href="/">{{ settings.SITE_NAME }}</a>
+    &nbsp;·&nbsp;
+    Free &amp; open source
+    &nbsp;·&nbsp;
+    <a href="https://github.com/eric-price-ok/tulsa-job-spot" rel="noopener">GitHub</a>
+    {% if settings.CONTACT_EMAIL %}
+      &nbsp;·&nbsp;
+      <a href="mailto:{{ settings.CONTACT_EMAIL }}">Contact</a>
+    {% endif %}
+  </div>
+</footer>
+
+<script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
+<script src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

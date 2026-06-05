@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ company.common_name }}{% endblock %}
+
+{% block content %}
+<div class="company-profile">
+
+  <div class="company-header">
+    <div class="company-header__info">
+      <h1>{{ company.common_name }}</h1>
+      {% if company.company_type_obj %}
+        <div class="company-header__meta">{{ company.company_type_obj.name }}</div>
+      {% endif %}
+      {% if company.company_size %}
+        <div class="company-header__meta">{{ company.company_size }} employees</div>
+      {% endif %}
+      {% if company.website and not company.is_scraped %}
+        <div style="margin-top:.5rem">
+          <a href="{{ company.website }}" target="_blank" rel="noopener noreferrer" class="btn btn--outline btn--sm">
+            Visit website &rarr;
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if company.is_scraped %}
+    <div class="flash flash--info" role="note" style="margin-bottom:1.5rem">
+      <strong>Note:</strong> This company profile was automatically sourced from job listings.
+      Contact information may not be available.
+    </div>
+  {% endif %}
+
+  {% if company.description %}
+    <div class="company-desc">{{ company.description }}</div>
+  {% endif %}
+
+  {# Social links — only for non-scraped companies #}
+  {% if company.socials and not company.is_scraped %}
+    <div style="margin-bottom:1.5rem">
+      <div class="job-detail__section-title">Connect</div>
+      <div class="flex gap-2 mt-1">
+        {% for social in company.socials %}
+          {% if social.is_active %}
+            <a href="{{ social.company_url }}" target="_blank" rel="noopener noreferrer"
+               class="btn btn--outline btn--sm">
+              {{ social.social_type.name }}
+            </a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {# Active job listings #}
+  <h2 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem">
+    Open Positions
+    {% if jobs %}
+      <span class="text-muted text-sm">({{ jobs | length }})</span>
+    {% endif %}
+  </h2>
+
+  {% if jobs %}
+    <div class="job-list" role="list">
+      {% for job in jobs %}
+        <a href="/jobs/{{ job.id }}" class="job-card" role="listitem">
+          <div class="job-card__title">{{ job.job_title }}</div>
+          <div class="job-card__meta">
+            {% if job.city %}
+              <span class="job-card__meta-item">📍 {{ job.city.city_name }}</span>
+            {% endif %}
+            {% if job.job_type %}
+              <span class="job-card__meta-item">{{ job.job_type.name }}</span>
+            {% endif %}
+            {% if job.office_location %}
+              <span class="job-card__meta-item">{{ job.office_location.name }}</span>
+            {% endif %}
+            {% if job.date_posted %}
+              <span class="job-card__meta-item">{{ job.date_posted.strftime('%b %-d') }}</span>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state__title">No open positions</div>
+      <div class="empty-state__text">Check back later for new listings.</div>
+    </div>
+  {% endif %}
+
+  <div style="margin-top:2rem">
+    <a href="/jobs" class="btn btn--ghost btn--sm">&larr; Browse all jobs</a>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ job.job_title }} — {{ job.company.common_name if job.company else '' }}{% endblock %}
+
+{% block content %}
+<div class="job-detail">
+
+  {# Status banner for non-active jobs #}
+  {% if job.job_status and job.job_status.name == 'closed' %}
+    <div class="status-banner status-banner--closed" role="alert">
+      This position is no longer accepting applications.
+    </div>
+  {% elif job.job_status and job.job_status.name == 'expired' %}
+    <div class="status-banner status-banner--expired" role="alert">
+      This listing has expired and may no longer be available.
+    </div>
+  {% endif %}
+
+  <div class="job-detail__header">
+    <div class="job-card__badges" style="margin-bottom:.5rem">
+      {% if job.company and job.company.is_scraped %}
+        <span class="badge badge--scraped">Scraped listing</span>
+      {% endif %}
+      {% if job.office_location %}
+        {% if job.office_location.name|lower == 'remote' %}
+          <span class="badge badge--remote">Remote</span>
+        {% elif job.office_location.name|lower == 'hybrid' %}
+          <span class="badge badge--hybrid">Hybrid</span>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <h1 class="job-detail__title">{{ job.job_title }}</h1>
+
+    {% if job.company %}
+      <a href="/companies/{{ job.company_id }}" class="job-detail__company-link">
+        {{ job.company.common_name }}
+      </a>
+    {% endif %}
+
+    <div class="job-detail__meta">
+      {% if job.city %}
+        <span>📍 {{ job.city.city_name }}</span>
+      {% endif %}
+      {% if job.job_type %}
+        <span>{{ job.job_type.name }}</span>
+      {% endif %}
+      {% if job.experience %}
+        <span>{{ job.experience.name }}</span>
+      {% endif %}
+      {% if job.minimum_salary %}
+        <span>
+          ${{ "{:,.0f}".format(job.minimum_salary) }}
+          {% if job.maximum_salary %} – ${{ "{:,.0f}".format(job.maximum_salary) }}{% endif %}
+          {% if job.pay_frequency %} / {{ job.pay_frequency }}{% endif %}
+        </span>
+      {% endif %}
+      {% if job.date_posted %}
+        <span>Posted {{ job.date_posted.strftime('%B %-d, %Y') }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {# CTA based on application method #}
+  <div class="job-detail__cta">
+    {% if job.job_status and job.job_status.name == 'active' and job.approved %}
+      {% if job.application_method == 'external_url' and job.posting_url %}
+        <a href="{{ job.posting_url }}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--lg">
+          Apply on {{ job.company.common_name if job.company else 'company' }} website &rarr;
+        </a>
+        <div class="text-xs text-muted mt-2">
+          You'll be redirected to the employer's site.
+        </div>
+      {% elif job.application_method == 'email' and job.application_email %}
+        <a href="mailto:{{ job.application_email }}?subject=Application: {{ job.job_title|urlencode }}"
+           class="btn btn--primary btn--lg">
+          Apply via Email
+        </a>
+      {% elif job.application_method == 'in_platform' %}
+        {% if current_user %}
+          <div class="flash flash--info">
+            In-platform applications are coming soon.
+          </div>
+        {% else %}
+          <a href="/auth/login" class="btn btn--primary btn--lg">
+            Sign in to Apply
+          </a>
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  </div>
+
+  {# Job description #}
+  {% if job.job_description %}
+    <div class="job-detail__body">
+      {{ job.job_description | safe }}
+    </div>
+  {% endif %}
+
+  {# Skills #}
+  {% if job.skills %}
+    <div class="job-detail__section">
+      <div class="job-detail__section-title">Skills</div>
+      <div class="skill-tags">
+        {% for jls in job.skills %}
+          <span class="skill-tag {% if jls.required_skill %}skill-tag--required{% endif %}">
+            {{ jls.skill.name }}
+            {% if jls.required_skill %} <span class="text-xs">(required)</span>{% endif %}
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {# Certifications #}
+  {% if job.certifications %}
+    <div class="job-detail__section">
+      <div class="job-detail__section-title">Certifications</div>
+      <div class="skill-tags">
+        {% for jlc in job.certifications %}
+          <span class="skill-tag {% if jlc.is_required %}skill-tag--required{% endif %}">
+            {{ jlc.certification.name }}
+            {% if jlc.is_required %} <span class="text-xs">(required)</span>{% endif %}
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {# Back link #}
+  <div style="margin-top:2rem">
+    <a href="/jobs" class="btn btn--ghost btn--sm">&larr; Back to jobs</a>
+  </div>
+
+</div>
+{% endblock %}

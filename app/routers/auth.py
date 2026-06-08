@@ -220,11 +220,22 @@ async def _get_or_create_user(
         await db.refresh(user)
         return user
 
-    # Check if email already registered under a different provider
+    # Check if email already registered
     result = await db.execute(select(User).where(User.email == email))
     existing = result.scalar_one_or_none()
     if existing:
-        # Email conflict — user must sign in with their original provider
+        if existing.oauth_provider == "seed":
+            # Seed-bootstrapped admin account — claim it with the real OAuth identity
+            existing.oauth_provider = provider
+            existing.oauth_subject = subject
+            if info.get("avatar_url"):
+                existing.avatar_url = info["avatar_url"]
+            if info.get("full_name") and not existing.full_name:
+                existing.full_name = info["full_name"]
+            await db.commit()
+            await db.refresh(existing)
+            return existing
+        # Genuine email conflict — user must sign in with their original provider
         return None
 
     # New user

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container container--narrow">
+  <div class="page-header">
+    <a href="/companies/{{ company.id }}/jobs" class="text-muted text-sm">← {{ company.common_name }} Listings</a>
+    <h1 class="page-header__title">Edit Job Listing</h1>
+    {% if not job.approved %}
+      <span class="badge badge--warning" style="margin-top:.5rem">Pending approval</span>
+    {% endif %}
+  </div>
+
+  <form method="POST" action="/jobs/{{ job.id }}/edit" class="form-card"
+        x-data>
+
+    {% include "partials/job_form_fields.html" %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary btn--lg">Save Changes</button>
+      <a href="/companies/{{ company.id }}/jobs" class="btn btn--ghost">Cancel</a>
+      <a href="/jobs/{{ job.id }}" class="btn btn--ghost" target="_blank">View Listing</a>
+    </div>
+
+    {% if job.approved %}
+      <p class="form-hint mt-2">Changes to an approved listing go live immediately.</p>
+    {% else %}
+      <p class="form-hint mt-2">This listing is still pending approval. Edits are saved but will be reviewed before the listing goes live.</p>
+    {% endif %}
+
+  </form>
+</div>
+
+<script>
+function skillPicker() {
+  const allSkills = JSON.parse(document.getElementById('skill-data').textContent);
+  const preSelected = JSON.parse(document.getElementById('selected-skill-data').textContent);
+  return {
+    query: '',
+    selected: preSelected,
+    suggestions: [],
+    filter() {
+      const q = this.query.trim().toLowerCase();
+      if (!q) { this.suggestions = []; return; }
+      this.suggestions = allSkills
+        .filter(s => !this.selected.find(x => x.id === s.id))
+        .filter(s => s.name.toLowerCase().includes(q))
+        .slice(0, 10);
+    },
+    add(skill) { this.selected.push(skill); this.query = ''; this.suggestions = []; },
+    remove(id) { this.selected = this.selected.filter(s => s.id !== id); },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/companies/{{ company.id }}/manage" class="text-muted text-sm">← Manage Company</a>
+    <h1 class="page-header__title">Job Listings</h1>
+    <p class="page-header__sub">{{ company.common_name }}</p>
+  </div>
+
+  <div style="margin-bottom:1.5rem">
+    <a href="/jobs/create?company_id={{ company.id }}" class="btn btn--primary">Post a Job</a>
+  </div>
+
+  {% if jobs %}
+    <div class="queue-list">
+      {% for job in jobs %}
+        {% set status_label %}
+          {% if not job.approved %}pending approval
+          {% elif job.job_status and job.job_status.name == 'closed' %}closed
+          {% elif job.job_status and job.job_status.name == 'expired' %}expired
+          {% else %}active
+          {% endif %}
+        {% endset %}
+        {% set status_class %}
+          {% if not job.approved %}badge--warning
+          {% elif job.job_status and job.job_status.name == 'active' %}badge--success
+          {% else %}badge
+          {% endif %}
+        {% endset %}
+
+        <div class="panel mb-3">
+          <div class="panel__body">
+            <div class="queue-item queue-item--stacked">
+              <div class="queue-item__main">
+                <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+                  <h3 style="margin:0">
+                    <a href="/jobs/{{ job.id }}" class="link">{{ job.job_title }}</a>
+                  </h3>
+                  <span class="badge {{ status_class | trim }}">{{ status_label | trim }}</span>
+                </div>
+                <div class="queue-item__meta">
+                  {% if job.job_type %}<span>{{ job.job_type.name }}</span>{% endif %}
+                  {% if job.office_location %}<span>{{ job.office_location.name }}</span>{% endif %}
+                  {% if job.city %}<span>{{ job.city.city_name }}</span>{% endif %}
+                  <span>Posted {{ job.created_at.strftime('%b %d, %Y') }}</span>
+                  {% if job.date_closed %}
+                    <span>Closes {{ job.date_closed.strftime('%b %d, %Y') }}</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="queue-actions">
+                <a href="/jobs/{{ job.id }}/edit" class="btn btn--outline btn--sm">Edit</a>
+                {% if job.job_status and job.job_status.name == 'active' %}
+                  <form method="POST" action="/jobs/{{ job.id }}/close"
+                        onsubmit="return confirm('Close this listing? It will no longer appear in search results.')">
+                    <button type="submit" class="btn btn--ghost btn--sm">Close</button>
+                  </form>
+                {% endif %}
+                <a href="/jobs/{{ job.id }}" class="btn btn--ghost btn--sm" target="_blank">View</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p class="empty-state__title">No listings yet</p>
+      <p class="empty-state__text">Post your first job to get started.</p>
+      <a href="/jobs/create?company_id={{ company.id }}" class="btn btn--primary mt-3">Post a Job</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

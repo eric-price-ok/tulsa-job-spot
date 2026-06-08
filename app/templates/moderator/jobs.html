@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/moderator" class="text-muted text-sm">← Dashboard</a>
+    <h1 class="page-header__title">Pending Job Listings</h1>
+    <p class="page-header__sub">{{ pending | length }} awaiting review</p>
+  </div>
+
+  {% if pending %}
+    <div class="queue-list">
+      {% for job in pending %}
+        <div class="panel mb-3">
+          <div class="panel__body">
+            <div class="queue-item queue-item--stacked">
+              <div class="queue-item__main">
+                <h3 style="margin-bottom:.25rem">
+                  <a href="/jobs/{{ job.id }}" class="link" target="_blank">{{ job.job_title }}</a>
+                </h3>
+                <div class="queue-item__meta">
+                  <span>{{ job.company.common_name }}</span>
+                  {% if job.poster %}
+                    <span>by {{ job.poster.email }}</span>
+                  {% endif %}
+                  <span>Submitted {{ job.created_at.strftime('%b %d, %Y') }}</span>
+                </div>
+                {% if job.job_description %}
+                  <details class="mt-2" style="font-size:.875rem">
+                    <summary class="text-muted" style="cursor:pointer">Preview description</summary>
+                    <p style="margin-top:.5rem;white-space:pre-wrap;max-height:200px;overflow:auto;background:var(--color-surface);padding:.75rem;border-radius:var(--radius)">{{ job.job_description | truncate(800) }}</p>
+                  </details>
+                {% endif %}
+              </div>
+
+              <div class="queue-actions">
+                <!-- Approve -->
+                <form method="POST" action="/moderator/jobs/{{ job.id }}/approve">
+                  <button type="submit" class="btn btn--primary btn--sm">Approve</button>
+                </form>
+
+                <!-- Reject -->
+                <details class="reject-details">
+                  <summary class="btn btn--ghost btn--sm">Reject…</summary>
+                  <form method="POST" action="/moderator/jobs/{{ job.id }}/reject"
+                        class="reject-form">
+                    <textarea name="reason" class="form-textarea form-textarea--sm"
+                              placeholder="Reason (emailed to poster)" rows="2"></textarea>
+                    <button type="submit" class="btn btn--sm"
+                            style="background:#fef2f2;color:var(--color-danger);border-color:var(--color-danger)">
+                      Confirm Reject
+                    </button>
+                  </form>
+                </details>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p class="empty-state__title">Queue is empty</p>
+      <p class="empty-state__text">No job listings pending approval.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

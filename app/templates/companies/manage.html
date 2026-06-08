@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <div class="flex items-center gap-2">
+      <a href="/companies/{{ company.id }}" class="text-muted text-sm">← {{ company.common_name }}</a>
+    </div>
+    <h1 class="page-header__title">Manage Company</h1>
+    <p class="page-header__sub">{{ company.common_name }}</p>
+  </div>
+
+  <div class="manage-layout">
+
+    <!-- Team members -->
+    <div class="panel mb-4">
+      <div class="panel__header">
+        <h2 class="panel__title">Team</h2>
+      </div>
+      <div class="panel__body">
+        {% if posters %}
+          <div class="queue-list">
+            {% for role in posters %}
+              <div class="queue-item">
+                <div class="queue-item__main">
+                  <strong>{{ role.user.display_name }}</strong>
+                  <span class="text-muted text-sm">{{ role.user.email }}</span>
+                  <span class="badge badge--role">{{ role.role | replace('_', ' ') | title }}</span>
+                </div>
+                <div class="queue-item__actions">
+                  {% if role.user_id != current_user.id %}
+                    <form method="POST"
+                          action="/companies/{{ company.id }}/posters/{{ role.id }}/remove"
+                          onsubmit="return confirm('Remove {{ role.user.display_name }} from this company?')">
+                      <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
+                    </form>
+                  {% else %}
+                    <span class="text-muted text-xs">(you)</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted text-sm">No team members yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Invite -->
+    <div class="panel mb-4">
+      <div class="panel__header">
+        <h2 class="panel__title">Invite a Job Poster</h2>
+        <p class="panel__sub">Send an invite link to someone's email address. Expires in 7 days.</p>
+      </div>
+      <div class="panel__body">
+        <form method="POST" action="/companies/{{ company.id }}/invite" class="invite-form">
+          <div class="form-group" style="flex:1">
+            <input class="form-input" type="email" name="invited_email"
+                   placeholder="colleague@example.com" required>
+          </div>
+          <button type="submit" class="btn btn--primary">Send Invite</button>
+        </form>
+
+        {% if invites %}
+          <h3 class="form-section__title mt-4">Pending Invites</h3>
+          <div class="queue-list">
+            {% for invite in invites %}
+              <div class="queue-item">
+                <div class="queue-item__main">
+                  <span>{{ invite.invited_email }}</span>
+                  <span class="text-muted text-xs">Expires {{ invite.expires_at.strftime('%b %d') }}</span>
+                </div>
+                <div class="queue-item__actions">
+                  <form method="POST"
+                        action="/companies/{{ company.id }}/invites/{{ invite.id }}/revoke">
+                    <button type="submit" class="btn btn--ghost btn--sm">Revoke</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Job listings -->
+    <div class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Job Listings</h2>
+      </div>
+      <div class="panel__body" style="display:flex;align-items:center;gap:1rem">
+        <a href="/jobs/create?company_id={{ company.id }}" class="btn btn--primary">Post a Job</a>
+        <a href="/companies/{{ company.id }}/jobs" class="btn btn--outline">View All Listings</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

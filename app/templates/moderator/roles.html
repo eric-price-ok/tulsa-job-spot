@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/moderator" class="text-muted text-sm">← Dashboard</a>
+    <h1 class="page-header__title">Pending Role Requests</h1>
+    <p class="page-header__sub">{{ pending | length }} awaiting review</p>
+  </div>
+
+  {% if pending %}
+    <div class="queue-list">
+      {% for ucr in pending %}
+        <div class="panel mb-3">
+          <div class="panel__body">
+            <div class="queue-item queue-item--stacked">
+              <div class="queue-item__main">
+                <h3 style="margin-bottom:.25rem">{{ ucr.user.email }}</h3>
+                <div class="queue-item__meta">
+                  <span>Requesting to join <strong>{{ ucr.company.common_name }}</strong></span>
+                  <span>Submitted {{ ucr.created_at.strftime('%b %d, %Y') }}</span>
+                </div>
+              </div>
+
+              <div class="queue-actions">
+                <!-- Approve -->
+                <form method="POST" action="/moderator/roles/{{ ucr.id }}/approve"
+                      class="queue-action-form">
+                  <select name="role" class="form-select form-select--sm">
+                    <option value="job_poster">as Job Poster</option>
+                    <option value="company_admin">as Company Admin</option>
+                  </select>
+                  <button type="submit" class="btn btn--primary btn--sm">Approve</button>
+                </form>
+
+                <!-- Reject -->
+                <details class="reject-details">
+                  <summary class="btn btn--ghost btn--sm">Reject…</summary>
+                  <form method="POST" action="/moderator/roles/{{ ucr.id }}/reject"
+                        class="reject-form">
+                    <textarea name="reason" class="form-textarea form-textarea--sm"
+                              placeholder="Reason (emailed to requester)" rows="2"></textarea>
+                    <button type="submit" class="btn btn--sm"
+                            style="background:#fef2f2;color:var(--color-danger);border-color:var(--color-danger)">
+                      Confirm Reject
+                    </button>
+                  </form>
+                </details>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p class="empty-state__title">Queue is empty</p>
+      <p class="empty-state__text">No role requests pending approval.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

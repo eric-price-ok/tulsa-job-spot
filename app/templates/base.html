@@ -16,6 +16,9 @@
 
     <div class="nav__links">
       <a href="/jobs" class="nav__link">Browse Jobs</a>
+      {% if current_user %}
+        <a href="/companies/join" class="nav__link">Post a Job</a>
+      {% endif %}
     </div>
 
     <div class="nav__actions">
@@ -27,7 +30,7 @@
           {{ current_user.display_name }}
         </span>
         {% if current_user.is_staff %}
-          <a href="/admin" class="btn btn--outline btn--sm">Admin</a>
+          <a href="/moderator" class="btn btn--outline btn--sm">Moderator</a>
         {% endif %}
         <form method="POST" action="/auth/logout" style="margin:0">
           <button type="submit" class="btn btn--ghost btn--sm">Sign out</button>
@@ -42,18 +45,32 @@
 </nav>
 
 <main id="main-content">
+  {% if request.query_params.get('success') %}
+    <div class="container">
+      <div class="flash flash--success" role="alert">
+        {% set s = request.query_params.get('success') %}
+        {% if s == 'company_submitted' %}Your company has been submitted and is pending approval.
+        {% elif s == 'role_requested' %}Your request has been submitted and is pending approval.
+        {% elif s == 'invite_sent' %}Invite sent successfully.
+        {% elif s == 'job_submitted' %}Your job listing has been submitted and is pending approval. You'll receive an email when it goes live.
+        {% elif s == 'job_saved' %}Your changes have been saved.
+        {% elif s == 'approved' %}Approved.
+        {% elif s == 'rejected' %}Rejected.
+        {% else %}Done.{% endif %}
+      </div>
+    </div>
+  {% endif %}
   {% if request.query_params.get('error') %}
     <div class="container">
       <div class="flash flash--error" role="alert">
         {% set err = request.query_params.get('error') %}
-        {% if err == 'oauth_failed' %}
-          Sign-in failed. Please try again.
-        {% elif err == 'no_email' %}
-          We couldn't retrieve your email from the sign-in provider.
-        {% elif err == 'email_conflict' %}
-          This email is already registered with a different sign-in method.
-        {% else %}
-          Something went wrong. Please try again.
+        {% if err == 'oauth_failed' %}Sign-in failed. Please try again.
+        {% elif err == 'no_email' %}We couldn't retrieve your email from the sign-in provider.
+        {% elif err == 'email_conflict' %}This email is already registered with a different sign-in method.
+        {% elif err == 'already_requested' %}You have already submitted a request for this company.
+        {% elif err == 'already_has_role' %}This person already has an active role at this company.
+        {% elif err == 'cannot_remove_self' %}You cannot remove your own admin role.
+        {% else %}Something went wrong. Please try again.
         {% endif %}
       </div>
     </div>

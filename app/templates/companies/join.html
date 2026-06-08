@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-header__title">Post a Job</h1>
+    <p class="page-header__sub">You need to be associated with a company before posting jobs.</p>
+  </div>
+
+  {% if existing_roles %}
+    <div class="panel mb-4">
+      <div class="panel__header">
+        <h2 class="panel__title">Your Companies</h2>
+      </div>
+      <div class="panel__body">
+        {% for role in existing_roles %}
+          <div class="queue-item">
+            <div class="queue-item__main">
+              <strong>{{ role.company.common_name }}</strong>
+              <span class="badge badge--role">{{ role.role | replace('_', ' ') | title }}</span>
+            </div>
+            <div class="queue-item__actions">
+              <a href="/companies/{{ role.company_id }}/manage" class="btn btn--outline btn--sm">Manage</a>
+              <a href="/jobs/create?company_id={{ role.company_id }}" class="btn btn--primary btn--sm">Post a Job</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="panel">
+    <div class="panel__header">
+      <h2 class="panel__title">Find Your Company</h2>
+      <p class="panel__sub">Search for an existing approved company to request access.</p>
+    </div>
+    <div class="panel__body">
+      <div class="search-bar mb-4">
+        <input
+          type="search"
+          id="company-search"
+          placeholder="Search by company name…"
+          autocomplete="off"
+          hx-get="/companies/search"
+          hx-trigger="input changed delay:300ms, search"
+          hx-target="#company-results"
+          hx-include="[name='q']"
+          name="q"
+          class="form-input"
+        >
+      </div>
+      <div id="company-results"></div>
+    </div>
+  </div>
+
+  <div class="panel mt-4">
+    <div class="panel__header">
+      <h2 class="panel__title">My Company Isn't Listed</h2>
+      <p class="panel__sub">Register a new company for moderator approval.</p>
+    </div>
+    <div class="panel__body">
+      <a href="/companies/create" class="btn btn--primary">Register a Company</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

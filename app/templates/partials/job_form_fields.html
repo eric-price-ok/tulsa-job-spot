@@ -1,0 +1,244 @@
+{# Shared form fields used by jobs/create.html and jobs/edit.html.
+   Context: job (None for create), plus all reference lists. #}
+
+{# ── Title ────────────────────────────────────────────────────── #}
+<div class="form-group">
+  <label class="form-label" for="job_title">Job Title <span class="required-mark">*</span></label>
+  <input class="form-input" id="job_title" name="job_title" type="text"
+         value="{{ job.job_title if job else '' }}" required maxlength="500"
+         placeholder="e.g. Senior Software Engineer">
+</div>
+
+{# ── Description ───────────────────────────────────────────────── #}
+<div class="form-group">
+  <label class="form-label" for="job_description">Job Description <span class="required-mark">*</span></label>
+  <textarea class="form-textarea" id="job_description" name="job_description"
+            rows="10" required
+            placeholder="Describe the role, responsibilities, and what you're looking for…">{{ job.job_description if job else '' }}</textarea>
+</div>
+
+{# ── Application Method ───────────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">How to Apply</h3>
+
+  <div class="form-group"
+       x-data="{ method: '{{ job.application_method if job else 'external_url' }}' }">
+
+    <div class="radio-group">
+      <label class="radio-label">
+        <input type="radio" name="application_method" value="external_url"
+               x-model="method"
+               {{ 'checked' if not job or job.application_method == 'external_url' }}>
+        Apply on company website
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="application_method" value="email"
+               x-model="method"
+               {{ 'checked' if job and job.application_method == 'email' }}>
+        Apply via email
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="application_method" value="in_platform"
+               x-model="method"
+               {{ 'checked' if job and job.application_method == 'in_platform' }}>
+        Apply on TulsaJobSpot (coming soon)
+      </label>
+    </div>
+
+    <div class="mt-3" x-show="method === 'external_url'" x-cloak>
+      <label class="form-label" for="posting_url">Application URL</label>
+      <input class="form-input" id="posting_url" name="posting_url" type="url"
+             value="{{ job.posting_url or '' if job else '' }}"
+             placeholder="https://company.com/careers/apply">
+    </div>
+
+    <div class="mt-3" x-show="method === 'email'" x-cloak>
+      <label class="form-label" for="application_email">Application Email</label>
+      <input class="form-input" id="application_email" name="application_email" type="email"
+             value="{{ job.application_email or '' if job else '' }}"
+             placeholder="jobs@company.com">
+    </div>
+
+  </div>
+</div>
+
+{# ── Categorization ──────────────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">Categorization</h3>
+
+  <div class="form-grid">
+
+    <div class="form-group">
+      <label class="form-label" for="job_type_id">Job Type</label>
+      <select class="form-select" id="job_type_id" name="job_type_id">
+        <option value="">— Select —</option>
+        {% for jt in job_types %}
+          <option value="{{ jt.id }}"
+            {{ 'selected' if job and job.job_type_id == jt.id }}>
+            {{ jt.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="office_location_id">Work Location</label>
+      <select class="form-select" id="office_location_id" name="office_location_id">
+        <option value="">— Select —</option>
+        {% for ol in office_locations %}
+          <option value="{{ ol.id }}"
+            {{ 'selected' if job and job.office_location_id == ol.id }}>
+            {{ ol.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="city_id">City</label>
+      <select class="form-select" id="city_id" name="city_id">
+        <option value="">— Select —</option>
+        {% for city in served_cities %}
+          <option value="{{ city.id }}"
+            {{ 'selected' if job and job.city_id == city.id }}>
+            {{ city.city_name }}{% if city.state_code %}, {{ city.state_code }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="experience_id">Experience Level</label>
+      <select class="form-select" id="experience_id" name="experience_id">
+        <option value="">— Select —</option>
+        {% for exp in experience_levels %}
+          <option value="{{ exp.id }}"
+            {{ 'selected' if job and job.experience_id == exp.id }}>
+            {{ exp.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="function_id">Job Function</label>
+      <select class="form-select" id="function_id" name="function_id"
+              hx-get="/jobs/specialties"
+              hx-include="[name='function_id']"
+              hx-target="#specialty_id"
+              hx-swap="innerHTML">
+        <option value="">— Select —</option>
+        {% for fn in functions %}
+          <option value="{{ fn.id }}"
+            {{ 'selected' if job and job.function == fn.id }}>
+            {{ fn.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="specialty_id">Specialty</label>
+      <select class="form-select" id="specialty_id" name="specialty_id">
+        <option value="">— Select —</option>
+        {% if specialties is defined %}
+          {% for s in specialties %}
+            <option value="{{ s.id }}"
+              {{ 'selected' if job and job.specialty == s.id }}>
+              {{ s.specialty }}
+            </option>
+          {% endfor %}
+        {% endif %}
+      </select>
+    </div>
+
+  </div>
+</div>
+
+{# ── Compensation ────────────────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">Compensation <span class="text-muted text-sm">(optional)</span></h3>
+
+  <div class="form-grid">
+
+    <div class="form-group">
+      <label class="form-label" for="minimum_salary">Minimum Pay</label>
+      <input class="form-input" id="minimum_salary" name="minimum_salary" type="number"
+             min="0" step="0.01"
+             value="{{ job.minimum_salary if job and job.minimum_salary else '' }}"
+             placeholder="e.g. 60000">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="maximum_salary">Maximum Pay</label>
+      <input class="form-input" id="maximum_salary" name="maximum_salary" type="number"
+             min="0" step="0.01"
+             value="{{ job.maximum_salary if job and job.maximum_salary else '' }}"
+             placeholder="e.g. 80000">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="pay_frequency">Pay Frequency</label>
+      <select class="form-select" id="pay_frequency" name="pay_frequency">
+        <option value="">— Select —</option>
+        {% for freq in pay_frequencies %}
+          <option value="{{ freq }}"
+            {{ 'selected' if job and job.pay_frequency == freq }}>
+            {{ freq | title }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="date_closed">Listing Expires</label>
+      <input class="form-input" id="date_closed" name="date_closed" type="date"
+             value="{{ job.date_closed.isoformat() if job and job.date_closed else '' }}">
+      <p class="form-hint">Leave blank for no expiry.</p>
+    </div>
+
+  </div>
+</div>
+
+{# ── Skills ──────────────────────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">Skills <span class="text-muted text-sm">(optional)</span></h3>
+
+  {# Pass skill data as JSON for Alpine.js #}
+  <script id="skill-data" type="application/json">
+    [{% for s in skills %}{"id":{{ s.id }},"name":{{ s.name | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]
+  </script>
+
+  {# Pre-selected skill IDs for edit mode #}
+  <script id="selected-skill-data" type="application/json">
+    {% if job and job.skills %}
+      [{% for js in job.skills %}{"id":{{ js.skill_id }},"name":{{ js.skill.name | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]
+    {% else %}
+      []
+    {% endif %}
+  </script>
+
+  <div x-data="skillPicker()" class="skill-picker">
+    <div class="skill-tags-row">
+      <template x-for="skill in selected" :key="skill.id">
+        <span class="chip">
+          <span x-text="skill.name"></span>
+          <button type="button" @click="remove(skill.id)" class="chip__remove" aria-label="Remove">×</button>
+        </span>
+      </template>
+      <input type="text" x-model="query" @input="filter()" @keydown.escape="suggestions = []"
+             @keydown.enter.prevent="suggestions.length && add(suggestions[0])"
+             class="skill-input" placeholder="Type to search skills…"
+             autocomplete="off">
+    </div>
+    <div x-show="suggestions.length > 0" class="skill-dropdown" x-cloak>
+      <template x-for="skill in suggestions" :key="skill.id">
+        <button type="button" @click="add(skill)" x-text="skill.name"
+                class="skill-dropdown-item"></button>
+      </template>
+    </div>
+    <template x-for="skill in selected" :key="skill.id">
+      <input type="hidden" name="skill_ids" :value="skill.id">
+    </template>
+  </div>
+</div>

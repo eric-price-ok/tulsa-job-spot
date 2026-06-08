@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="empty-state" style="padding-top:4rem">
+    <div class="empty-state__icon">⏳</div>
+    <h1 class="empty-state__title">Pending Approval</h1>
+    <p class="empty-state__text">
+      Your submission has been received and is waiting for moderator review.<br>
+      You'll receive an email once a decision has been made.
+    </p>
+    <div style="margin-top:1.5rem">
+      <a href="/jobs" class="btn btn--outline">Browse Jobs</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

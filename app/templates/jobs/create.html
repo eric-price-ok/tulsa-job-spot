@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container container--narrow">
+  <div class="page-header">
+    {% if selected_company %}
+      <a href="/companies/{{ selected_company.id }}/manage" class="text-muted text-sm">← {{ selected_company.common_name }}</a>
+    {% endif %}
+    <h1 class="page-header__title">Post a Job</h1>
+    {% if selected_company %}
+      <p class="page-header__sub">{{ selected_company.common_name }}</p>
+    {% endif %}
+  </div>
+
+  <form method="POST" action="/jobs/create" class="form-card"
+        x-data>
+
+    {# Company selector — shown when user has multiple companies #}
+    {% if user_companies | length > 1 %}
+      <div class="form-group">
+        <label class="form-label" for="company_id">Posting for <span class="required-mark">*</span></label>
+        <select class="form-select" id="company_id" name="company_id" required>
+          {% for c in user_companies %}
+            <option value="{{ c.id }}"
+              {{ 'selected' if selected_company and selected_company.id == c.id }}>
+              {{ c.common_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    {% else %}
+      <input type="hidden" name="company_id" value="{{ user_companies[0].id }}">
+    {% endif %}
+
+    {% include "partials/job_form_fields.html" %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary btn--lg">Submit for Review</button>
+      {% if selected_company %}
+        <a href="/companies/{{ selected_company.id }}/manage" class="btn btn--ghost">Cancel</a>
+      {% else %}
+        <a href="/companies/join" class="btn btn--ghost">Cancel</a>
+      {% endif %}
+    </div>
+
+    <p class="form-hint mt-2">
+      Your listing will be reviewed by a moderator before it goes live. You'll receive an email when it's approved.
+    </p>
+
+  </form>
+</div>
+
+<script>
+function skillPicker() {
+  const allSkills = JSON.parse(document.getElementById('skill-data').textContent);
+  const preSelected = JSON.parse(document.getElementById('selected-skill-data').textContent);
+  return {
+    query: '',
+    selected: preSelected,
+    suggestions: [],
+    filter() {
+      const q = this.query.trim().toLowerCase();
+      if (!q) { this.suggestions = []; return; }
+      this.suggestions = allSkills
+        .filter(s => !this.selected.find(x => x.id === s.id))
+        .filter(s => s.name.toLowerCase().includes(q))
+        .slice(0, 10);
+    },
+    add(skill) { this.selected.push(skill); this.query = ''; this.suggestions = []; },
+    remove(id) { this.selected = this.selected.filter(s => s.id !== id); },
+  };
+}
+</script>
+{% endblock %}

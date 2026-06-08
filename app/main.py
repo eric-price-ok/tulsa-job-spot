@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from .config import settings
 from .routers.auth import router as auth_router
@@ -33,6 +34,9 @@ app.add_middleware(
     https_only=settings.is_production,
     same_site="lax",
 )
+# Must be outermost — tells FastAPI to trust X-Forwarded-Proto from Caddy
+# so request.url_for() generates https:// URLs
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 

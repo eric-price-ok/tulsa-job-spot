@@ -1,0 +1,33 @@
+{% set q = request.query_params.get('q', '') %}
+{% if companies %}
+  <div class="queue-list">
+    {% for company in companies %}
+      {% set existing = user_role_map.get(company.id) %}
+      <div class="queue-item">
+        <div class="queue-item__main">
+          <strong>{{ company.common_name }}</strong>
+          {% if company.website %}
+            <a href="{{ company.website }}" class="text-muted text-sm" target="_blank" rel="noopener">
+              {{ company.website | replace('https://', '') | replace('http://', '') | truncate(50) }}
+            </a>
+          {% endif %}
+        </div>
+        <div class="queue-item__actions">
+          {% if existing %}
+            {% if existing.approved %}
+              <span class="badge badge--success">Already a member</span>
+            {% else %}
+              <span class="badge badge--warning">Request pending</span>
+            {% endif %}
+          {% else %}
+            <form method="POST" action="/companies/{{ company.id }}/request-role" style="margin:0">
+              <button type="submit" class="btn btn--outline btn--sm">Request to Join</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% elif q | trim %}
+  <p class="text-muted text-sm">No companies found matching "{{ q | trim }}".</p>
+{% endif %}

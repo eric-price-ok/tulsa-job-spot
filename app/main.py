@@ -10,6 +10,7 @@ from .config import settings
 from .routers.auth import router as auth_router
 from .routers.companies import router as companies_router
 from .routers.jobs import router as jobs_router
+from .routers.moderator import router as moderator_router
 from .templates import templates
 
 
@@ -43,6 +44,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(companies_router)
+app.include_router(moderator_router)
 
 
 @app.get("/")

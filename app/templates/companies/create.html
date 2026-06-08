@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-header__title">Register Your Company</h1>
+    <p class="page-header__sub">Your company will be reviewed by a moderator before going live.</p>
+  </div>
+
+  <div class="form-card">
+    <form method="POST" action="/companies/create">
+      <div class="form-section">
+        <h2 class="form-section__title">Company Info</h2>
+
+        <div class="form-group">
+          <label class="form-label" for="common_name">Company Name <span class="form-required">*</span></label>
+          <input class="form-input" type="text" id="common_name" name="common_name"
+                 required maxlength="255" autofocus>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="company_type_id">Company Type <span class="form-required">*</span></label>
+          <select class="form-select" id="company_type_id" name="company_type_id" required>
+            <option value="">Select a type…</option>
+            {% for ct in company_types %}
+              <option value="{{ ct.id }}">{{ ct.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="website">Website</label>
+          <input class="form-input" type="url" id="website" name="website"
+                 placeholder="https://example.com" maxlength="500">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">About the Company</label>
+          <textarea class="form-textarea" id="description" name="description"
+                    rows="5" maxlength="5000"
+                    placeholder="What does your company do? Culture, mission, size…"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Submit for Approval</button>
+        <a href="/companies/join" class="btn btn--ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

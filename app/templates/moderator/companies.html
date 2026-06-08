@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/moderator" class="text-muted text-sm">← Dashboard</a>
+    <h1 class="page-header__title">Pending Companies</h1>
+    <p class="page-header__sub">{{ companies | length }} awaiting review</p>
+  </div>
+
+  {% if companies %}
+    <div class="queue-list">
+      {% for company in companies %}
+        {% set submitter = company.user_roles[0].user if company.user_roles else none %}
+        <div class="panel mb-3">
+          <div class="panel__body">
+            <div class="queue-item queue-item--stacked">
+              <div class="queue-item__main">
+                <h3 style="margin-bottom:.25rem">{{ company.common_name }}</h3>
+                <div class="queue-item__meta">
+                  {% if company.website %}
+                    <span>
+                      <a href="{{ company.website }}" target="_blank" rel="noopener">{{ company.website }}</a>
+                    </span>
+                  {% endif %}
+                  <span>Submitted {{ company.created_at.strftime('%b %d, %Y') }}</span>
+                  {% if submitter %}
+                    <span>by {{ submitter.email }}</span>
+                  {% endif %}
+                </div>
+                {% if company.description %}
+                  <p class="text-sm" style="margin-top:.5rem;color:var(--color-text)">
+                    {{ company.description | truncate(300) }}
+                  </p>
+                {% endif %}
+              </div>
+
+              <div class="queue-actions">
+                <!-- Approve -->
+                <form method="POST" action="/moderator/companies/{{ company.id }}/approve"
+                      class="queue-action-form">
+                  <select name="role" class="form-select form-select--sm">
+                    <option value="company_admin">as Company Admin</option>
+                    <option value="job_poster">as Job Poster</option>
+                  </select>
+                  <button type="submit" class="btn btn--primary btn--sm">Approve</button>
+                </form>
+
+                <!-- Reject -->
+                <details class="reject-details">
+                  <summary class="btn btn--ghost btn--sm">Reject…</summary>
+                  <form method="POST" action="/moderator/companies/{{ company.id }}/reject"
+                        class="reject-form">
+                    <textarea name="reason" class="form-textarea form-textarea--sm"
+                              placeholder="Reason (emailed to submitter)" rows="2"></textarea>
+                    <button type="submit" class="btn btn--sm"
+                            style="background:#fef2f2;color:var(--color-danger);border-color:var(--color-danger)">
+                      Confirm Reject
+                    </button>
+                  </form>
+                </details>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p class="empty-state__title">Queue is empty</p>
+      <p class="empty-state__text">No companies pending approval.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

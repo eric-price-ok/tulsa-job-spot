@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="auth-card" style="margin-top:4rem">
+    <h1 class="auth-card__title">You're Invited</h1>
+    <p class="auth-card__sub">
+      Join <strong>{{ invite.company.common_name }}</strong> as a job poster on {{ settings.SITE_NAME }}.
+    </p>
+
+    {% if current_user %}
+      <form method="POST" action="/invites/{{ invite.token }}/accept">
+        <p class="text-muted text-sm mb-2">
+          Accepting as <strong>{{ current_user.email }}</strong>
+        </p>
+        <button type="submit" class="btn btn--primary" style="width:100%">
+          Accept Invite
+        </button>
+      </form>
+    {% else %}
+      <p class="text-muted text-sm mb-2">Sign in first to accept this invite.</p>
+      <a href="/auth/login?next=/invites/{{ invite.token }}" class="btn btn--primary" style="display:block;text-align:center">
+        Sign In to Accept
+      </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

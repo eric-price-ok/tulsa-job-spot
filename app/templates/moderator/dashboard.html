@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-header__title">Moderator Dashboard</h1>
+  </div>
+
+  <div class="stat-cards">
+    <a href="/moderator/companies" class="stat-card {% if pending_companies %}stat-card--alert{% endif %}">
+      <div class="stat-card__value">{{ pending_companies }}</div>
+      <div class="stat-card__label">Pending Companies</div>
+    </a>
+    <a href="/moderator/roles" class="stat-card {% if pending_roles %}stat-card--alert{% endif %}">
+      <div class="stat-card__value">{{ pending_roles }}</div>
+      <div class="stat-card__label">Pending Role Requests</div>
+    </a>
+    <a href="/moderator/jobs" class="stat-card {% if pending_jobs %}stat-card--alert{% endif %}">
+      <div class="stat-card__value">{{ pending_jobs }}</div>
+      <div class="stat-card__label">Pending Job Listings</div>
+    </a>
+  </div>
+
+  <div class="panel mt-4">
+    <div class="panel__header">
+      <h2 class="panel__title">Quick Links</h2>
+    </div>
+    <div class="panel__body">
+      <ul style="display:flex;flex-direction:column;gap:.5rem">
+        <li><a href="/moderator/companies">Company Approval Queue</a></li>
+        <li><a href="/moderator/roles">Role Request Queue</a></li>
+        <li><a href="/moderator/jobs">Job Listing Queue <span class="text-muted text-xs">(Phase 2 — next)</span></a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

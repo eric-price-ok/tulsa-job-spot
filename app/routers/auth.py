@@ -1,9 +1,10 @@
+from datetime import datetime
 from typing import Optional
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
@@ -112,11 +113,7 @@ async def oauth_callback(provider: str, request: Request, db: AsyncSession = Dep
     if user is None:
         return RedirectResponse("/auth/login?error=email_conflict")
 
-    # Update last login
-    await db.execute(
-        select(User).where(User.id == user.id)
-    )
-    user.last_login_at = func.now()
+    user.last_login_at = datetime.now()
     await db.commit()
 
     request.session["user_id"] = user.id

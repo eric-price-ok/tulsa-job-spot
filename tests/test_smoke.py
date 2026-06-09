@@ -13,6 +13,6 @@ async def test_jobs_page_loads(client: AsyncClient):
 
 
 async def test_admin_requires_auth(client: AsyncClient):
-    response = await client.get("/admin/", follow_redirects=False)
+    response = await client.get("/admin", follow_redirects=False)
     assert response.status_code == 303
     assert "/auth/login" in response.headers["location"]

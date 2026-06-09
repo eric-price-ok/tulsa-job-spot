@@ -239,6 +239,9 @@ async def job_create_submit(
     skill_ids: List[int] = Form(default=[]),
 ):
     company = await _require_poster_role(company_id, current_user, db)
+    company_slug = company.slug
+    company_name = company.common_name
+    poster_email = current_user.email
 
     job_title = job_title.strip()
     if not job_title:
@@ -302,15 +305,15 @@ async def job_create_submit(
     await enqueue_email(
         "job_submitted",
         {
-            "job_title": job.job_title,
-            "company_name": company.common_name,
-            "posted_by": current_user.email,
+            "job_title": job_title,
+            "company_name": company_name,
+            "posted_by": poster_email,
             "job_id": job.id,
         },
     )
 
     return RedirectResponse(
-        f"/companies/{company.slug}/jobs?success=job_submitted", status_code=303
+        f"/companies/{company_slug}/jobs?success=job_submitted", status_code=303
     )
 
 
@@ -387,6 +390,7 @@ async def job_edit_submit(
         raise HTTPException(status_code=404)
 
     company = await _require_poster_role(job.company_id, current_user, db)
+    company_slug = company.slug
 
     def parse_salary(val: Optional[str]) -> Optional[Decimal]:
         if not val or not val.strip():
@@ -439,7 +443,7 @@ async def job_edit_submit(
     await db.commit()
 
     return RedirectResponse(
-        f"/companies/{company.slug}/jobs?success=job_saved", status_code=303
+        f"/companies/{company_slug}/jobs?success=job_saved", status_code=303
     )
 
 
@@ -458,13 +462,14 @@ async def job_close(
         raise HTTPException(status_code=404)
 
     company = await _require_poster_role(job.company_id, current_user, db)
+    company_slug = company.slug
 
     closed_status_id = await _get_closed_status_id(db)
     job.job_status_id = closed_status_id
     await db.commit()
 
     return RedirectResponse(
-        f"/companies/{company.slug}/jobs", status_code=303
+        f"/companies/{company_slug}/jobs", status_code=303
     )
 
 

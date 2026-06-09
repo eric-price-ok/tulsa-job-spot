@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/admin" class="text-muted text-sm">← Admin</a>
+    <h1 class="page-header__title">Import Companies</h1>
+  </div>
+
+  {% if request.query_params.get('success') %}
+    <div class="alert alert--success mb-4">
+      Successfully imported {{ request.query_params.get('success') }} company record(s).
+    </div>
+  {% endif %}
+
+  {% if request.query_params.get('error') == 'invalid_data' %}
+    <div class="alert alert--error mb-4">
+      The import data was invalid or expired. Please upload the file again.
+    </div>
+  {% endif %}
+
+  {# ── Step 1: Upload form ──────────────────────────────────────────── #}
+  {% if step == 'upload' %}
+
+    {% if error %}
+      <div class="alert alert--error mb-4">{{ error }}</div>
+    {% endif %}
+
+    <div class="panel mb-4">
+      <div class="panel__header"><h2 class="panel__title">Upload CSV</h2></div>
+      <div class="panel__body">
+        <p class="text-muted mb-3">
+          Upload a CSV file to bulk-import companies. The file will be parsed and you'll see a
+          preview before any records are saved.
+          <a href="/docs/how-to-import-companies.md" target="_blank">View format guide</a>.
+        </p>
+        <form method="POST" action="/admin/import-companies/preview" enctype="multipart/form-data">
+          <div class="form-group" style="max-width:28rem">
+            <label class="form-label" for="file">CSV File <span class="required-mark">*</span></label>
+            <input class="form-input" id="file" name="file" type="file" accept=".csv,text/csv" required>
+            <p class="form-hint">UTF-8 or UTF-8-with-BOM encoding. First row must be column headers.</p>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn--primary">Preview Import</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__header"><h2 class="panel__title">Required CSV Columns</h2></div>
+      <div class="panel__body">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Column</th><th>Required</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>common_name</code></td><td>Yes</td><td>Display name of the company</td></tr>
+            <tr><td><code>company_type</code></td><td>Yes</td><td>
+              Must match one of:
+              {% for ct in company_types %}
+                <code>{{ ct.name }}</code>{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </td></tr>
+            <tr><td><code>legal_name</code></td><td>No</td><td>Full legal entity name</td></tr>
+            <tr><td><code>website</code></td><td>No</td><td>Full URL (https://…)</td></tr>
+            <tr><td><code>jobboard</code></td><td>No</td><td>Company's own job board URL</td></tr>
+            <tr><td><code>description</code></td><td>No</td><td>Short description</td></tr>
+            <tr><td><code>company_size</code></td><td>No</td><td>e.g. <code>1-10</code>, <code>11-50</code>, <code>51-200</code>, <code>201-500</code>, <code>501-1000</code>, <code>1001+</code></td></tr>
+            <tr><td><code>date_founded</code></td><td>No</td><td>YYYY-MM-DD</td></tr>
+            <tr><td><code>date_closed</code></td><td>No</td><td>YYYY-MM-DD — only for defunct companies</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  {# ── Step 2: Preview + confirm ────────────────────────────────────── #}
+  {% elif step == 'preview' %}
+
+    <div class="stat-cards mb-4">
+      <div class="stat-card {{ 'stat-card--alert' if import_count == 0 }}">
+        <div class="stat-card__value">{{ import_count }}</div>
+        <div class="stat-card__label">To Import</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__value">{{ skip_count }}</div>
+        <div class="stat-card__label">Skipped (already exist)</div>
+      </div>
+      <div class="stat-card {{ 'stat-card--alert' if error_count > 0 }}">
+        <div class="stat-card__value">{{ error_count }}</div>
+        <div class="stat-card__label">Errors</div>
+      </div>
+    </div>
+
+    {% if rows_errors %}
+      <div class="panel mb-4">
+        <div class="panel__header"><h2 class="panel__title">Errors{% if error_count > 10 %} (showing first 10 of {{ error_count }}){% endif %}</h2></div>
+        <div class="panel__body">
+          <table class="admin-table">
+            <thead><tr><th>Row</th><th>Name</th><th>Problem</th></tr></thead>
+            <tbody>
+              {% for e in rows_errors %}
+                <tr>
+                  <td class="text-muted text-sm">{{ e.row }}</td>
+                  <td>{{ e.common_name }}</td>
+                  <td class="text-sm" style="color:var(--color-error,#c0392b)">{{ e.reason }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p class="form-hint mt-2">Fix these rows in your CSV and re-upload to include them.</p>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if rows_skipped %}
+      <div class="panel mb-4">
+        <div class="panel__header"><h2 class="panel__title">Skipped{% if skip_count > 10 %} (showing first 10 of {{ skip_count }}){% endif %}</h2></div>
+        <div class="panel__body">
+          <table class="admin-table">
+            <thead><tr><th>Row</th><th>Name</th><th>Reason</th></tr></thead>
+            <tbody>
+              {% for s in rows_skipped %}
+                <tr>
+                  <td class="text-muted text-sm">{{ s.row }}</td>
+                  <td>{{ s.common_name }}</td>
+                  <td class="text-sm text-muted">{{ s.reason }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if import_count > 0 %}
+      <div class="panel mb-4">
+        <div class="panel__header">
+          <h2 class="panel__title">Records to Import{% if import_count > 20 %} (showing first 20 of {{ import_count }}){% endif %}</h2>
+        </div>
+        <div class="panel__body">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Company Name</th>
+                <th>Legal Name</th>
+                <th>Type</th>
+                <th>Website</th>
+                <th>Size</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in preview_rows %}
+                <tr>
+                  <td style="font-weight:500">{{ r.common_name }}</td>
+                  <td class="text-sm text-muted">{{ r.legal_name or '—' }}</td>
+                  <td class="text-sm">{{ r.company_type_id }}</td>
+                  <td class="text-sm text-muted">
+                    {% if r.website %}<a href="{{ r.website }}" target="_blank" rel="noopener">{{ r.website|truncate(40) }}</a>{% else %}—{% endif %}
+                  </td>
+                  <td class="text-sm text-muted">{{ r.company_size or '—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__body">
+          <p class="mb-3">
+            <strong>{{ import_count }} company record(s)</strong> will be created and automatically approved.
+            This action cannot be undone from the UI — records can only be removed directly from the database.
+          </p>
+          <form method="POST" action="/admin/import-companies/confirm" style="display:inline">
+            <input type="hidden" name="encoded_rows" value="{{ encoded_rows }}">
+            <button type="submit" class="btn btn--primary"
+                    onclick="return confirm('Import {{ import_count }} company record(s)? They will be immediately approved and visible on the site.')">
+              Confirm Import ({{ import_count }} records)
+            </button>
+          </form>
+          <a href="/admin/import-companies" class="btn btn--ghost ml-2">Upload Different File</a>
+        </div>
+      </div>
+
+    {% else %}
+      <div class="empty-state">
+        <p class="empty-state__title">Nothing to import</p>
+        <p class="empty-state__body">All rows were either skipped (already exist) or had errors.</p>
+        <a href="/admin/import-companies" class="btn btn--outline mt-3">Upload Different File</a>
+      </div>
+    {% endif %}
+
+  {% endif %}
+</div>
+{% endblock %}

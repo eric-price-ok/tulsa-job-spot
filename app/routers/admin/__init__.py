@@ -1,7 +1,11 @@
+import base64
+import csv
+import io
+import json
 from datetime import datetime
 from typing import Optional, Type
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +17,7 @@ from ...models.company import Company, UserCompanyRole
 from ...models.job import JobListing
 from ...models.reference import (
     City,
+    CompanyType,
     Experience,
     Function,
     FunctionSpecialty,
@@ -25,6 +30,7 @@ from ...models.reference import (
 from ...models.scraping import ScraperSource, ScrapingLog
 from ...models.user import User
 from ...templates import templates
+from ...utils import generate_slug, sanitize_url
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -622,3 +628,205 @@ async def demote_moderator(
     user.is_moderator = False
     await db.commit()
     return RedirectResponse("/admin/moderators?success=demoted", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Import companies from CSV  (issue #26)
+# ---------------------------------------------------------------------------
+
+_IMPORT_REQUIRED_COLS = {"common_name", "company_type"}
+
+
+@router.get("/import-companies", response_class=HTMLResponse)
+async def import_companies_get(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    company_types = (
+        await db.execute(select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name))
+    ).scalars().all()
+
+    return templates.TemplateResponse(
+        request,
+        "admin/import_companies.html",
+        {
+            "title": "Import Companies",
+            "current_user": current_user,
+            "step": "upload",
+            "company_types": company_types,
+        },
+    )
+
+
+@router.post("/import-companies/preview", response_class=HTMLResponse)
+async def import_companies_preview(
+    request: Request,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    company_types = (
+        await db.execute(select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name))
+    ).scalars().all()
+
+    content = await file.read()
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(text))
+    fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
+
+    if not _IMPORT_REQUIRED_COLS.issubset(set(fieldnames)):
+        missing = _IMPORT_REQUIRED_COLS - set(fieldnames)
+        return templates.TemplateResponse(
+            request,
+            "admin/import_companies.html",
+            {
+                "title": "Import Companies",
+                "current_user": current_user,
+                "step": "upload",
+                "company_types": company_types,
+                "error": f"Missing required column(s): {', '.join(sorted(missing))}. "
+                         f"Got: {', '.join(fieldnames) or '(no columns found)'}",
+            },
+        )
+
+    company_type_map = {ct.name.lower(): ct.id for ct in company_types}
+
+    existing_names = {
+        n.lower()
+        for n in (await db.execute(select(Company.common_name))).scalars().all()
+    }
+
+    rows_to_import: list[dict] = []
+    rows_skipped: list[dict] = []
+    rows_errors: list[dict] = []
+
+    for line_num, raw_row in enumerate(reader, start=2):
+        row = {k.strip().lower(): (v.strip() if v else "") for k, v in raw_row.items()}
+
+        common_name = row.get("common_name", "").strip()
+        if not common_name:
+            rows_errors.append({"row": line_num, "common_name": "—", "reason": "common_name is blank"})
+            continue
+
+        if common_name.lower() in existing_names:
+            rows_skipped.append({"row": line_num, "common_name": common_name, "reason": "already exists"})
+            continue
+
+        ct_name = row.get("company_type", "").strip()
+        ct_id = company_type_map.get(ct_name.lower())
+        if ct_id is None:
+            rows_errors.append({
+                "row": line_num,
+                "common_name": common_name,
+                "reason": f"unknown company_type \"{ct_name}\"",
+            })
+            continue
+
+        date_founded = None
+        if row.get("date_founded"):
+            try:
+                date_founded = datetime.strptime(row["date_founded"], "%Y-%m-%d").isoformat()
+            except ValueError:
+                rows_errors.append({
+                    "row": line_num,
+                    "common_name": common_name,
+                    "reason": f"invalid date_founded \"{row['date_founded']}\" — use YYYY-MM-DD",
+                })
+                continue
+
+        date_closed = None
+        if row.get("date_closed"):
+            try:
+                date_closed = datetime.strptime(row["date_closed"], "%Y-%m-%d").isoformat()
+            except ValueError:
+                rows_errors.append({
+                    "row": line_num,
+                    "common_name": common_name,
+                    "reason": f"invalid date_closed \"{row['date_closed']}\" — use YYYY-MM-DD",
+                })
+                continue
+
+        rows_to_import.append({
+            "common_name": common_name,
+            "legal_name": row.get("legal_name") or None,
+            "company_type_id": ct_id,
+            "website": sanitize_url(row.get("website")),
+            "jobboard": sanitize_url(row.get("jobboard")),
+            "description": row.get("description") or None,
+            "company_size": row.get("company_size") or None,
+            "date_founded": date_founded,
+            "date_closed": date_closed,
+        })
+        existing_names.add(common_name.lower())
+
+    encoded = base64.b64encode(json.dumps(rows_to_import).encode()).decode()
+
+    return templates.TemplateResponse(
+        request,
+        "admin/import_companies.html",
+        {
+            "title": "Import Companies — Preview",
+            "current_user": current_user,
+            "step": "preview",
+            "company_types": company_types,
+            "import_count": len(rows_to_import),
+            "skip_count": len(rows_skipped),
+            "error_count": len(rows_errors),
+            "preview_rows": rows_to_import[:20],
+            "rows_skipped": rows_skipped[:10],
+            "rows_errors": rows_errors[:10],
+            "encoded_rows": encoded,
+        },
+    )
+
+
+@router.post("/import-companies/confirm")
+async def import_companies_confirm(
+    encoded_rows: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    try:
+        rows: list[dict] = json.loads(base64.b64decode(encoded_rows.encode()).decode())
+    except Exception:
+        return RedirectResponse("/admin/import-companies?error=invalid_data", status_code=303)
+
+    now = datetime.now()
+    imported = 0
+
+    for row in rows:
+        base = generate_slug(row["common_name"])
+        slug = base
+        counter = 2
+        while await db.scalar(select(Company.id).where(Company.slug == slug)):
+            slug = f"{base}-{counter}"
+            counter += 1
+
+        date_founded = datetime.fromisoformat(row["date_founded"]) if row.get("date_founded") else None
+        date_closed = datetime.fromisoformat(row["date_closed"]) if row.get("date_closed") else None
+
+        db.add(Company(
+            slug=slug,
+            common_name=row["common_name"],
+            legal_name=row.get("legal_name"),
+            company_type=row["company_type_id"],
+            website=row.get("website"),
+            jobboard=row.get("jobboard"),
+            description=row.get("description"),
+            company_size=row.get("company_size"),
+            date_founded=date_founded,
+            date_closed=date_closed,
+            approved=True,
+            approved_by=current_user.id,
+            approved_at=now,
+            is_scraped=False,
+        ))
+        imported += 1
+
+    await db.commit()
+    return RedirectResponse(f"/admin/import-companies?success={imported}", status_code=303)

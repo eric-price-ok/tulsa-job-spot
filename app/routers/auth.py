@@ -73,7 +73,10 @@ for provider, (cid, csec) in _PROVIDER_CREDENTIALS.items():
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     if request.session.get("user_id"):
-        return RedirectResponse(request.query_params.get("next", "/"))
+        next_url = request.query_params.get("next", "/")
+        if not is_safe_redirect(next_url):
+            next_url = "/"
+        return RedirectResponse(next_url)
     if next_url := request.query_params.get("next"):
         if is_safe_redirect(next_url):
             request.session["next"] = next_url

@@ -11,8 +11,8 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
-import app.models  # registers all ORM models with Base.metadata
-from app.models.base import Base
+import app.models  # ensures all ORM relationships are registered
+from app.models.user import User
 from app.database import get_db
 
 TEST_DATABASE_URL = os.environ["DATABASE_URL"]
@@ -20,10 +20,9 @@ TEST_DATABASE_URL = os.environ["DATABASE_URL"]
 
 @pytest.fixture(scope="session")
 async def engine():
+    # Schema comes from the cloned production DB — no setup/teardown needed.
+    # Per-test rollback (SAVEPOINT) ensures writes never persist between tests.
     _engine = create_async_engine(TEST_DATABASE_URL)
-    async with _engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
     yield _engine
     await _engine.dispose()
 
@@ -37,6 +36,20 @@ async def db(engine):
         yield session
         await session.close()
         await conn.rollback()
+
+
+@pytest.fixture
+async def user(db):
+    """A plain authenticated user with no company role or staff flags."""
+    u = User(
+        email="test@example.com",
+        full_name="Test User",
+        oauth_provider="test",
+        oauth_subject="test-subject-123",
+    )
+    db.add(u)
+    await db.flush()
+    return u
 
 
 @pytest.fixture

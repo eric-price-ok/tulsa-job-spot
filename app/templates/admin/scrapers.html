@@ -14,20 +14,20 @@
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Name <span class="required-mark">*</span></label>
-            <input class="form-input" name="name" type="text" placeholder="e.g. Indeed — Tulsa" required>
+            <input class="form-input" id="scraper_name" name="name" type="text" placeholder="e.g. Indeed — Tulsa" required>
           </div>
           <div class="form-group">
             <label class="form-label">Scraper Class <span class="required-mark">*</span></label>
-            <input class="form-input" name="scraper_class" type="text"
+            <input class="form-input" id="scraper_class" name="scraper_class" type="text"
                    placeholder="app.scrapers.indeed.IndeedScraper" required>
           </div>
           <div class="form-group">
             <label class="form-label">URL <span class="required-mark">*</span></label>
-            <input class="form-input" name="url" type="url" placeholder="https://…" required>
+            <input class="form-input" id="scraper_url" name="url" type="url" placeholder="https://…" required>
           </div>
           <div class="form-group">
             <label class="form-label">Company (optional)</label>
-            <select class="form-select" name="company_id">
+            <select class="form-select" id="scraper_company_id" name="company_id">
               <option value="">— None —</option>
               {% for c in companies %}
                 <option value="{{ c.id }}">{{ c.common_name }}</option>
@@ -36,7 +36,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Cron Schedule</label>
-            <input class="form-input" name="cron_schedule" type="text"
+            <input class="form-input" id="cron_schedule" name="cron_schedule" type="text"
                    value="0 3 * * *" placeholder="0 3 * * *">
             <p class="form-hint">Default: daily at 3 AM. Standard cron syntax.</p>
           </div>

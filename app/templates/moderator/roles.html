@@ -25,7 +25,7 @@
                 <!-- Approve -->
                 <form method="POST" action="/moderator/roles/{{ ucr.id }}/approve"
                       class="queue-action-form">
-                  <select name="role" class="form-select form-select--sm">
+                  <select id="role_{{ ucr.id }}" name="role" class="form-select form-select--sm">
                     <option value="job_poster">as Job Poster</option>
                     <option value="company_admin">as Company Admin</option>
                   </select>
@@ -37,7 +37,7 @@
                   <summary class="btn btn--ghost btn--sm">Reject…</summary>
                   <form method="POST" action="/moderator/roles/{{ ucr.id }}/reject"
                         class="reject-form">
-                    <textarea name="reason" class="form-textarea form-textarea--sm"
+                    <textarea id="reason_{{ ucr.id }}" name="reason" class="form-textarea form-textarea--sm"
                               placeholder="Reason (emailed to requester)" rows="2"></textarea>
                     <button type="submit" class="btn btn--sm"
                             style="background:#fef2f2;color:var(--color-danger);border-color:var(--color-danger)">

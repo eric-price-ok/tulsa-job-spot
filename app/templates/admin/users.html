@@ -8,7 +8,7 @@
   </div>
 
   <form method="GET" action="/admin/users" class="inline-form mb-4">
-    <input class="form-input" name="q" type="search" value="{{ q }}"
+    <input class="form-input" id="q" name="q" type="search" value="{{ q }}"
            placeholder="Search by name or email…" style="max-width:24rem">
     <button type="submit" class="btn btn--outline btn--sm">Search</button>
     {% if q %}<a href="/admin/users" class="btn btn--ghost btn--sm">Clear</a>{% endif %}

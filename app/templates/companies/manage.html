@@ -66,7 +66,7 @@
       <div class="panel__body">
         <form method="POST" action="/companies/{{ company.slug }}/invite" class="invite-form">
           <div class="form-group" style="flex:1">
-            <input class="form-input" type="email" name="invited_email"
+            <input class="form-input" id="invited_email" type="email" name="invited_email"
                    placeholder="colleague@example.com" required>
           </div>
           <button type="submit" class="btn btn--primary">Send Invite</button>

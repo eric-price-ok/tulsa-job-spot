@@ -20,7 +20,7 @@
   >
     <div class="filter-bar">
       {% if city_options %}
-      <select name="city_id" aria-label="Filter by city">
+      <select id="city_id" name="city_id" aria-label="Filter by city">
         <option value="">All cities</option>
         {% for city in city_options %}
         <option value="{{ city.id }}" {% if filters.city_id == city.id %}selected{% endif %}>
@@ -31,7 +31,7 @@
       {% endif %}
 
       {% if industries %}
-      <select name="industry_id" aria-label="Filter by industry">
+      <select id="industry_id" name="industry_id" aria-label="Filter by industry">
         <option value="">All industries</option>
         {% for ind in industries %}
         <option value="{{ ind.id }}" {% if filters.industry_id == ind.id %}selected{% endif %}>

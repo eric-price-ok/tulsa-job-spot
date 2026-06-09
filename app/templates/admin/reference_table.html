@@ -11,7 +11,7 @@
     <div class="panel__header"><h2 class="panel__title">Add Entry</h2></div>
     <div class="panel__body">
       <form method="POST" action="/admin/reference/{{ table }}/add" class="inline-form">
-        <input class="form-input" name="name" type="text" placeholder="Name" required style="flex:1">
+        <input class="form-input" id="entry_name" name="name" type="text" placeholder="Name" required style="flex:1">
         <button type="submit" class="btn btn--primary">Add</button>
       </form>
     </div>

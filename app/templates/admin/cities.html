@@ -13,10 +13,10 @@
     <div class="panel__body">
       <form method="POST" action="/admin/cities/add" class="inline-form">
         <div class="form-group" style="flex:1;min-width:160px">
-          <input class="form-input" name="city_name" type="text" placeholder="City name" required>
+          <input class="form-input" id="city_name" name="city_name" type="text" placeholder="City name" required>
         </div>
         <div class="form-group" style="flex:1;min-width:160px">
-          <select class="form-select" name="state_id">
+          <select class="form-select" id="state_id" name="state_id">
             <option value="">— State —</option>
             {% for state in states %}
               <option value="{{ state.id }}">{{ state.name }} ({{ state.abbreviation }})</option>
@@ -52,7 +52,7 @@
               <td>
                 <form method="POST" action="/admin/cities/{{ city.id }}/sort"
                       class="inline-form" style="gap:.5rem">
-                  <input class="form-input form-input--sm" type="number" name="sort_order"
+                  <input class="form-input form-input--sm" id="sort_{{ city.id }}" type="number" name="sort_order"
                          value="{{ city.sort_order or '' }}" placeholder="—" style="width:70px">
                   <button type="submit" class="btn btn--ghost btn--xs">Save</button>
                 </form>

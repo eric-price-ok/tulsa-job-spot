@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
@@ -13,6 +14,25 @@ from .routers.companies import router as companies_router
 from .routers.jobs import router as jobs_router
 from .routers.moderator import router as moderator_router
 from .templates import templates
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        for deprecated in ("X-XSS-Protection", "Expires"):
+            try:
+                del response.headers[deprecated]
+            except KeyError:
+                pass
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif "cache-control" not in response.headers:
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        ct = response.headers.get("content-type", "")
+        if ct.startswith("text/") and "charset" not in ct:
+            response.headers["content-type"] = ct + "; charset=utf-8"
+        return response
 
 
 @asynccontextmanager
@@ -39,6 +59,8 @@ app.add_middleware(
 # Must be outermost — tells FastAPI to trust X-Forwarded-Proto from Caddy
 # so request.url_for() generates https:// URLs
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+# Added after ProxyHeadersMiddleware so it wraps all responses including static files
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 

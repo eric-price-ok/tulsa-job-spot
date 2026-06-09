@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Edit — {{ company.common_name }}{% endblock %}
+
+{% block content %}
+<div class="container container--narrow">
+  <div class="page-header">
+    <a href="/companies/{{ company.id }}/manage" class="text-muted text-sm">← Manage {{ company.common_name }}</a>
+    <h1 class="page-header__title">Edit Company Profile</h1>
+  </div>
+
+  {# ── Basic company info ──────────────────────────────────────────────── #}
+  <div class="form-card" style="max-width:100%">
+    <form method="POST" action="/companies/{{ company.id }}/edit">
+
+      <div class="form-section">
+        <h2 class="form-section__title">Company Info</h2>
+
+        <div class="form-group">
+          <label class="form-label" for="common_name">Company Name <span class="form-required">*</span></label>
+          <input class="form-input" type="text" id="common_name" name="common_name"
+                 value="{{ company.common_name }}" required maxlength="255">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="legal_name">Legal Name</label>
+          <input class="form-input" type="text" id="legal_name" name="legal_name"
+                 value="{{ company.legal_name or '' }}" maxlength="255">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="company_type_id">Company Type <span class="form-required">*</span></label>
+          <select class="form-select" id="company_type_id" name="company_type_id" required>
+            <option value="">Select a type…</option>
+            {% for ct in company_types %}
+              <option value="{{ ct.id }}" {% if company.company_type == ct.id %}selected{% endif %}>
+                {{ ct.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="company_size">Company Size</label>
+          <input class="form-input" type="text" id="company_size" name="company_size"
+                 value="{{ company.company_size or '' }}" maxlength="50"
+                 placeholder="e.g. 10–50 employees">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="website">Website</label>
+          <input class="form-input" type="url" id="website" name="website"
+                 value="{{ company.website or '' }}" maxlength="500"
+                 placeholder="https://example.com">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="jobboard">Job Board URL</label>
+          <input class="form-input" type="url" id="jobboard" name="jobboard"
+                 value="{{ company.jobboard or '' }}" maxlength="500"
+                 placeholder="https://example.com/careers">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">About the Company</label>
+          <textarea class="form-textarea" id="description" name="description"
+                    rows="5" maxlength="5000">{{ company.description or '' }}</textarea>
+        </div>
+      </div>
+
+      {# ── Industries ──────────────────────────────────────────────────── #}
+      {% if industries %}
+      <div class="form-section">
+        <h2 class="form-section__title">Industries</h2>
+        <div class="checkbox-grid">
+          {% for ind in industries %}
+          <label class="filter-checkbox">
+            <input type="checkbox" name="industry_ids" value="{{ ind.id }}"
+                   {% if ind.id in current_industry_ids %}checked{% endif %}>
+            {{ ind.name }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Save Changes</button>
+        <a href="/companies/{{ company.id }}/manage" class="btn btn--ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  {# ── Social links ────────────────────────────────────────────────────── #}
+  <div class="panel mb-4" style="margin-top:2rem">
+    <div class="panel__header">
+      <h2 class="panel__title">Social Links</h2>
+    </div>
+    <div class="panel__body">
+      {% if company.socials %}
+        <div class="queue-list">
+          {% for social in company.socials %}
+          {% if social.is_active %}
+          <div class="queue-item">
+            <div class="queue-item__main">
+              <strong>{{ social.social_type.name }}</strong>
+              <a href="{{ social.company_url }}" target="_blank" rel="noopener noreferrer"
+                 class="text-muted text-sm table-link">{{ social.company_url | truncate(60, true, '…') }}</a>
+            </div>
+            <div class="queue-item__actions">
+              <form method="POST"
+                    action="/companies/{{ company.id }}/edit/socials/{{ social.id }}/remove"
+                    onsubmit="return confirm('Remove this social link?')">
+                <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
+              </form>
+            </div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted text-sm">No social links yet.</p>
+      {% endif %}
+
+      <div style="margin-top:1.25rem">
+        <h3 class="form-section__title">Add Social Link</h3>
+        <form method="POST" action="/companies/{{ company.id }}/edit/socials/add" class="inline-form">
+          <div class="form-group" style="min-width:160px">
+            <select class="form-select form-input--sm" name="social_type_id" required>
+              <option value="">Platform…</option>
+              {% for st in social_types %}
+                <option value="{{ st.id }}">{{ st.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="flex:1">
+            <input class="form-input form-input--sm" type="url" name="company_url"
+                   placeholder="https://linkedin.com/company/…" required maxlength="500">
+          </div>
+          <button type="submit" class="btn btn--primary btn--sm">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Locations ───────────────────────────────────────────────────────── #}
+  <div class="panel mb-4">
+    <div class="panel__header">
+      <h2 class="panel__title">Locations</h2>
+    </div>
+    <div class="panel__body">
+      {% if company.sites %}
+        <div class="queue-list">
+          {% for site in company.sites %}
+          {% if site.is_active %}
+          <div class="queue-item">
+            <div class="queue-item__main">
+              {% if site.is_headquarters %}
+                <span class="badge badge--role">HQ</span>
+              {% endif %}
+              <strong>{{ site.city.city_name if site.city else '(no city)' }}</strong>
+              {% if site.phone %}
+                <span class="text-muted text-sm">{{ site.phone }}</span>
+              {% endif %}
+            </div>
+            <div class="queue-item__actions">
+              <form method="POST"
+                    action="/companies/{{ company.id }}/edit/sites/{{ site.id }}/remove"
+                    onsubmit="return confirm('Remove this location?')">
+                <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
+              </form>
+            </div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted text-sm">No locations yet.</p>
+      {% endif %}
+
+      <div style="margin-top:1.25rem">
+        <h3 class="form-section__title">Add Location</h3>
+        <form method="POST" action="/companies/{{ company.id }}/edit/sites/add" class="inline-form">
+          <div class="form-group" style="min-width:180px">
+            <select class="form-select form-input--sm" name="city_id" required>
+              <option value="">City…</option>
+              {% for city in served_cities %}
+                <option value="{{ city.id }}">{{ city.city_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="min-width:150px">
+            <input class="form-input form-input--sm" type="tel" name="phone"
+                   placeholder="Phone (optional)" maxlength="50">
+          </div>
+          <label class="filter-checkbox" style="white-space:nowrap">
+            <input type="checkbox" name="is_headquarters" value="true"> Headquarters
+          </label>
+          <button type="submit" class="btn btn--primary btn--sm">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

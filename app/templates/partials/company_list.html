@@ -7,51 +7,71 @@
     {% else %}
       <strong>{{ total }}</strong> companies
     {% endif %}
-    {% if filters.q %}
-      matching &ldquo;{{ filters.q }}&rdquo;
-    {% endif %}
   </div>
-  <span id="search-spinner" class="htmx-indicator text-muted text-sm">Searching…</span>
 </div>
 
 {% if companies %}
-  <div class="company-list" role="list">
-    {% for company in companies %}
-    {% set hq = company.sites | selectattr('is_headquarters', 'equalto', true) | first %}
-    <a href="/companies/{{ company.id }}" class="company-card" role="listitem">
-      <div class="company-card__top">
-        <div class="company-card__name">{{ company.common_name }}</div>
-        <div class="company-card__badges">
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>City</th>
+        <th>Phone</th>
+        <th>Website</th>
+        <th>Job Board</th>
+        <th>Socials</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for company in companies %}
+      {% set hq = (company.sites | selectattr('is_headquarters', 'equalto', true) | list | first) or (company.sites | first) %}
+      <tr>
+        <td>
+          <a href="/companies/{{ company.id }}" class="table-link">{{ company.common_name }}</a>
           {% if company.is_scraped %}
             <span class="badge badge--scraped" title="Sourced by scraper">Scraped</span>
           {% endif %}
-        </div>
-      </div>
-      <div class="company-card__meta">
-        {% if company.company_type_obj %}
-          <span class="company-card__meta-item">{{ company.company_type_obj.name }}</span>
-        {% endif %}
-        {% if hq and hq.city %}
-          <span class="company-card__meta-item">📍 {{ hq.city.city_name }}</span>
-        {% endif %}
-        {% if company.company_size %}
-          <span class="company-card__meta-item">{{ company.company_size }}</span>
-        {% endif %}
-      </div>
-      {% if company.description %}
-        <div class="company-card__desc">{{ company.description }}</div>
-      {% endif %}
-    </a>
-    {% endfor %}
-  </div>
+        </td>
+        <td>{{ hq.city.city_name if hq and hq.city else '' }}</td>
+        <td class="text-nowrap">{{ hq.phone if hq and hq.phone else '' }}</td>
+        <td>
+          {% if company.website and not company.is_scraped and (company.website.startswith('http://') or company.website.startswith('https://')) %}
+            <a href="{{ company.website }}" target="_blank" rel="noopener noreferrer" class="table-link">
+              {{ company.website | replace('https://', '') | replace('http://', '') | truncate(30, true, '…') }}
+            </a>
+          {% endif %}
+        </td>
+        <td>
+          {% if company.jobboard and not company.is_scraped and (company.jobboard.startswith('http://') or company.jobboard.startswith('https://')) %}
+            <a href="{{ company.jobboard }}" target="_blank" rel="noopener noreferrer" class="table-link">
+              {{ company.jobboard | replace('https://', '') | replace('http://', '') | truncate(30, true, '…') }}
+            </a>
+          {% endif %}
+        </td>
+        <td>
+          {% if not company.is_scraped %}
+            {% for social in company.socials %}
+              {% if social.is_active and social.company_url and (social.company_url.startswith('http://') or social.company_url.startswith('https://')) %}
+                <a href="{{ social.company_url }}" target="_blank" rel="noopener noreferrer"
+                   class="table-link" title="{{ social.social_type.name }}">
+                  {{ social.social_type.name }}
+                </a>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
   {% if total_pages > 1 %}
   <nav class="pagination" aria-label="Pagination">
     {% set base_params = [] %}
-    {% if filters.q %}{% set _ = base_params.append('q=' ~ filters.q|urlencode) %}{% endif %}
-    {% if filters.company_type_id %}{% set _ = base_params.append('company_type_id=' ~ filters.company_type_id) %}{% endif %}
+    {% if filters.city_id %}{% set _ = base_params.append('city_id=' ~ filters.city_id) %}{% endif %}
     {% if filters.industry_id %}{% set _ = base_params.append('industry_id=' ~ filters.industry_id) %}{% endif %}
-    {% if filters.has_open_jobs %}{% set _ = base_params.append('has_open_jobs=true') %}{% endif %}
     {% set qstr = base_params | join('&') %}
 
     {% if page > 1 %}
@@ -80,7 +100,7 @@
   <div class="empty-state">
     <div class="empty-state__title">No companies found</div>
     <div class="empty-state__text">
-      {% if filters.q or filters.company_type_id or filters.industry_id or filters.has_open_jobs %}
+      {% if filters.city_id or filters.industry_id %}
         Try adjusting your filters or <a href="/companies">clear all filters</a>.
       {% else %}
         No companies have been approved yet. Check back soon.

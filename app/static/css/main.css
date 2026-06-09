@@ -607,6 +607,83 @@ ul { list-style: none; }
   overflow: hidden;
 }
 
+/* ---------------------------------------------------------------------------
+   Filter bar (inline header filters)
+   --------------------------------------------------------------------------- */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: 1.25rem;
+}
+.filter-bar select {
+  padding: .4rem .6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: .875rem;
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.filter-bar select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+   Data table
+   --------------------------------------------------------------------------- */
+.table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+.data-table th {
+  text-align: left;
+  padding: .55rem .75rem;
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid var(--color-border);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: .6rem .75rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  color: var(--color-text);
+}
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.data-table tbody tr:hover td {
+  background: var(--color-primary-light);
+}
+.table-link {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+.table-link:hover {
+  text-decoration: underline;
+}
+.text-nowrap { white-space: nowrap; }
+
+/* ---------------------------------------------------------------------------
+   Checkbox grid (industry checkboxes in edit form)
+   --------------------------------------------------------------------------- */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: .5rem;
+}
+
 .filter-checkbox {
   display: flex;
   align-items: center;

@@ -23,6 +23,7 @@ _LEGAL_SUFFIX_RE = re.compile(
 def _slug(name: str) -> str:
     text = _LEGAL_SUFFIX_RE.sub("", name).strip()
     text = text.lower()
+    text = re.sub(r"[''']", "", text)
     text = re.sub(r"[^a-z0-9]+", "-", text)
     return text.strip("-") or "company"
 

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/admin" class="text-muted text-sm">← Admin</a>
+    <h1 class="page-header__title">Manage Users</h1>
+    <span class="text-muted text-sm">{{ total }} total</span>
+  </div>
+
+  <form method="GET" action="/admin/users" class="inline-form mb-4">
+    <input class="form-input" name="q" type="search" value="{{ q }}"
+           placeholder="Search by name or email…" style="max-width:24rem">
+    <button type="submit" class="btn btn--outline btn--sm">Search</button>
+    {% if q %}<a href="/admin/users" class="btn btn--ghost btn--sm">Clear</a>{% endif %}
+  </form>
+
+  {% if users %}
+    <div class="panel">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Provider</th>
+            <th>Roles</th>
+            <th>Joined</th>
+            <th>Last Login</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+            <tr class="{{ 'text-muted' if not u.is_active }}">
+              <td>
+                <div style="font-weight:500">{{ u.display_name }}</div>
+                <div class="text-xs text-muted">{{ u.email }}</div>
+              </td>
+              <td class="text-sm">{{ u.oauth_provider }}</td>
+              <td>
+                {% if u.is_admin %}
+                  <span class="badge badge--warning">Admin</span>
+                {% elif u.is_moderator %}
+                  <span class="badge badge--success">Moderator</span>
+                {% endif %}
+              </td>
+              <td class="text-sm text-muted">{{ u.created_at.strftime('%b %d, %Y') }}</td>
+              <td class="text-sm text-muted">
+                {% if u.last_login_at %}{{ u.last_login_at.strftime('%b %d, %Y') }}{% else %}—{% endif %}
+              </td>
+              <td>
+                {% if u.is_active %}
+                  <span class="badge badge--success">Active</span>
+                {% else %}
+                  <span class="badge">Inactive</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if u.id != current_user.id %}
+                  <form method="POST" action="/admin/users/{{ u.id }}/toggle-active" style="display:inline">
+                    <input type="hidden" name="page" value="{{ page }}">
+                    {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+                    <button type="submit" class="btn btn--ghost btn--xs"
+                            onclick="return confirm('{{ 'Deactivate' if u.is_active else 'Reactivate' }} {{ u.display_name }}?')">
+                      {{ 'Deactivate' if u.is_active else 'Reactivate' }}
+                    </button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if total_pages > 1 %}
+      <div class="pagination mt-3">
+        {% if page > 1 %}
+          <a href="?page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}" class="btn btn--ghost btn--sm">← Prev</a>
+        {% endif %}
+        <span class="text-sm text-muted">Page {{ page }} of {{ total_pages }}</span>
+        {% if page < total_pages %}
+          <a href="?page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}" class="btn btn--ghost btn--sm">Next →</a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+  {% elif q %}
+    <div class="empty-state">
+      <p class="empty-state__title">No users match "{{ q }}"</p>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p class="empty-state__title">No users yet</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

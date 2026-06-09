@@ -359,20 +359,21 @@ async def send_company_invite(
         expires_at=datetime.now() + timedelta(days=7),
     )
     db.add(invite)
+    company_name = company.common_name  # save before commit
     await db.commit()
 
     await enqueue_email(
         "invite_sent",
         {
             "invited_email": invited_email,
-            "company_name": company.common_name,
+            "company_name": company_name,
             "invited_by_name": current_user.display_name,
             "token": token,
         },
     )
 
     return RedirectResponse(
-        f"/companies/{company.slug}/manage?success=invite_sent", status_code=303
+        f"/companies/{company_slug}/manage?success=invite_sent", status_code=303
     )
 
 
@@ -390,7 +391,7 @@ async def revoke_invite(
         await db.delete(invite)
         await db.commit()
 
-    return RedirectResponse(f"/companies/{company.slug}/manage", status_code=303)
+    return RedirectResponse(f"/companies/{company_slug}/manage", status_code=303)
 
 
 @router.post("/companies/{company_slug}/posters/{role_id}/remove")
@@ -406,12 +407,12 @@ async def remove_poster(
     if role and role.company_id == company.id:
         if role.user_id == current_user.id and role.role == "company_admin":
             return RedirectResponse(
-                f"/companies/{company.slug}/manage?error=cannot_remove_self", status_code=303
+                f"/companies/{company_slug}/manage?error=cannot_remove_self", status_code=303
             )
         await db.delete(role)
         await db.commit()
 
-    return RedirectResponse(f"/companies/{company.slug}/manage", status_code=303)
+    return RedirectResponse(f"/companies/{company_slug}/manage", status_code=303)
 
 
 # ---------------------------------------------------------------------------
@@ -465,6 +466,8 @@ async def invite_accept_submit(
     if invite is None or invite.accepted or invite.expires_at < datetime.now():
         raise HTTPException(status_code=410, detail="Invite expired or already used")
 
+    company_slug = invite.company.slug  # save before commit
+
     existing = await db.scalar(
         select(UserCompanyRole).where(
             UserCompanyRole.user_id == current_user.id,
@@ -473,7 +476,7 @@ async def invite_accept_submit(
     )
     if existing:
         if existing.approved:
-            return RedirectResponse(f"/companies/{invite.company.slug}/manage", status_code=303)
+            return RedirectResponse(f"/companies/{company_slug}/manage", status_code=303)
         existing.role = invite.role
         existing.approved = True
         existing.approved_by = invite.invited_by
@@ -493,7 +496,7 @@ async def invite_accept_submit(
     invite.accepted_by = current_user.id
     await db.commit()
 
-    return RedirectResponse(f"/companies/{invite.company.slug}/manage", status_code=303)
+    return RedirectResponse(f"/companies/{company_slug}/manage", status_code=303)
 
 
 # ---------------------------------------------------------------------------
@@ -785,7 +788,7 @@ async def company_edit_submit(
         db.add(CompanyIndustry(company_id=company.id, industry_id=ind_id))
 
     await db.commit()
-    return RedirectResponse(f"/companies/{company.slug}/edit?success=saved", status_code=303)
+    return RedirectResponse(f"/companies/{new_slug}/edit?success=saved", status_code=303)
 
 
 @router.post("/companies/{company_slug}/edit/socials/add")
@@ -806,7 +809,7 @@ async def company_edit_social_add(
             is_active=True,
         ))
         await db.commit()
-    return RedirectResponse(f"/companies/{company.slug}/edit", status_code=303)
+    return RedirectResponse(f"/companies/{company_slug}/edit", status_code=303)
 
 
 @router.post("/companies/{company_slug}/edit/socials/{social_id}/remove")
@@ -821,7 +824,7 @@ async def company_edit_social_remove(
     if social and social.company_id == company.id:
         await db.delete(social)
         await db.commit()
-    return RedirectResponse(f"/companies/{company.slug}/edit", status_code=303)
+    return RedirectResponse(f"/companies/{company_slug}/edit", status_code=303)
 
 
 @router.post("/companies/{company_slug}/edit/sites/add")
@@ -847,7 +850,7 @@ async def company_edit_site_add(
             is_active=True,
         ))
         await db.commit()
-    return RedirectResponse(f"/companies/{company.slug}/edit", status_code=303)
+    return RedirectResponse(f"/companies/{company_slug}/edit", status_code=303)
 
 
 @router.post("/companies/{company_slug}/edit/sites/{site_id}/remove")
@@ -862,7 +865,7 @@ async def company_edit_site_remove(
     if site and site.company_id == company.id:
         await db.delete(site)
         await db.commit()
-    return RedirectResponse(f"/companies/{company.slug}/edit", status_code=303)
+    return RedirectResponse(f"/companies/{company_slug}/edit", status_code=303)
 
 
 # ---------------------------------------------------------------------------

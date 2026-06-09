@@ -1,0 +1,90 @@
+<div class="results-header" aria-live="polite" aria-atomic="true">
+  <div class="results-count">
+    {% if total == 0 %}
+      No companies found
+    {% elif total == 1 %}
+      <strong>1</strong> company
+    {% else %}
+      <strong>{{ total }}</strong> companies
+    {% endif %}
+    {% if filters.q %}
+      matching &ldquo;{{ filters.q }}&rdquo;
+    {% endif %}
+  </div>
+  <span id="search-spinner" class="htmx-indicator text-muted text-sm">Searching…</span>
+</div>
+
+{% if companies %}
+  <div class="company-list" role="list">
+    {% for company in companies %}
+    {% set hq = company.sites | selectattr('is_headquarters', 'equalto', true) | first %}
+    <a href="/companies/{{ company.id }}" class="company-card" role="listitem">
+      <div class="company-card__top">
+        <div class="company-card__name">{{ company.common_name }}</div>
+        <div class="company-card__badges">
+          {% if company.is_scraped %}
+            <span class="badge badge--scraped" title="Sourced by scraper">Scraped</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="company-card__meta">
+        {% if company.company_type_obj %}
+          <span class="company-card__meta-item">{{ company.company_type_obj.name }}</span>
+        {% endif %}
+        {% if hq and hq.city %}
+          <span class="company-card__meta-item">📍 {{ hq.city.city_name }}</span>
+        {% endif %}
+        {% if company.company_size %}
+          <span class="company-card__meta-item">{{ company.company_size }}</span>
+        {% endif %}
+      </div>
+      {% if company.description %}
+        <div class="company-card__desc">{{ company.description }}</div>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if total_pages > 1 %}
+  <nav class="pagination" aria-label="Pagination">
+    {% set base_params = [] %}
+    {% if filters.q %}{% set _ = base_params.append('q=' ~ filters.q|urlencode) %}{% endif %}
+    {% if filters.company_type_id %}{% set _ = base_params.append('company_type_id=' ~ filters.company_type_id) %}{% endif %}
+    {% if filters.industry_id %}{% set _ = base_params.append('industry_id=' ~ filters.industry_id) %}{% endif %}
+    {% if filters.has_open_jobs %}{% set _ = base_params.append('has_open_jobs=true') %}{% endif %}
+    {% set qstr = base_params | join('&') %}
+
+    {% if page > 1 %}
+      <a href="/companies?{{ qstr }}&page={{ page - 1 }}" class="pagination__btn"
+         hx-get="/companies?{{ qstr }}&page={{ page - 1 }}" hx-target="#company-results" hx-push-url="true">
+        &larr; Previous
+      </a>
+    {% else %}
+      <span class="pagination__btn pagination__btn--disabled">&larr; Previous</span>
+    {% endif %}
+
+    <span class="text-muted text-sm">Page {{ page }} of {{ total_pages }}</span>
+
+    {% if page < total_pages %}
+      <a href="/companies?{{ qstr }}&page={{ page + 1 }}" class="pagination__btn"
+         hx-get="/companies?{{ qstr }}&page={{ page + 1 }}" hx-target="#company-results" hx-push-url="true">
+        Next &rarr;
+      </a>
+    {% else %}
+      <span class="pagination__btn pagination__btn--disabled">Next &rarr;</span>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+{% else %}
+  <div class="empty-state">
+    <div class="empty-state__title">No companies found</div>
+    <div class="empty-state__text">
+      {% if filters.q or filters.company_type_id or filters.industry_id or filters.has_open_jobs %}
+        Try adjusting your filters or <a href="/companies">clear all filters</a>.
+      {% else %}
+        No companies have been approved yet. Check back soon.
+      {% endif %}
+    </div>
+  </div>
+{% endif %}

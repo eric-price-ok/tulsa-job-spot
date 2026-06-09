@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/admin" class="text-muted text-sm">← Admin</a>
+    <h1 class="page-header__title">Manage Moderators</h1>
+  </div>
+
+  {# ── Current staff ─────────────────────────────────────────────── #}
+  <div class="panel mb-4">
+    <div class="panel__header"><h2 class="panel__title">Current Staff</h2></div>
+    <div class="panel__body" style="padding:0">
+      {% if staff %}
+        <table class="admin-table">
+          <thead>
+            <tr><th>User</th><th>Role</th><th>Joined</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for u in staff %}
+              <tr>
+                <td>
+                  <div style="font-weight:500">{{ u.display_name }}</div>
+                  <div class="text-xs text-muted">{{ u.email }}</div>
+                </td>
+                <td>
+                  {% if u.is_admin %}
+                    <span class="badge badge--warning">Admin</span>
+                  {% else %}
+                    <span class="badge badge--success">Moderator</span>
+                  {% endif %}
+                </td>
+                <td class="text-sm text-muted">{{ u.created_at.strftime('%b %d, %Y') }}</td>
+                <td>
+                  {% if u.is_moderator and not u.is_admin and u.id != current_user.id %}
+                    <form method="POST" action="/admin/moderators/{{ u.id }}/demote" style="display:inline">
+                      <button type="submit" class="btn btn--ghost btn--xs"
+                              onclick="return confirm('Remove moderator access for {{ u.display_name }}?')">
+                        Remove
+                      </button>
+                    </form>
+                  {% elif u.id == current_user.id %}
+                    <span class="text-muted text-xs">You</span>
+                  {% elif u.is_admin %}
+                    <span class="text-muted text-xs">Admin (protected)</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty-state" style="padding:2rem">
+          <p class="empty-state__title">No staff yet</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Promote a user ────────────────────────────────────────────── #}
+  <div class="panel">
+    <div class="panel__header"><h2 class="panel__title">Promote a User to Moderator</h2></div>
+    <div class="panel__body">
+      <form method="GET" action="/admin/moderators" class="inline-form mb-3">
+        <input class="form-input" name="q" type="search" value="{{ q }}"
+               placeholder="Search by name or email…" style="max-width:24rem">
+        <button type="submit" class="btn btn--outline btn--sm">Search</button>
+        {% if q %}<a href="/admin/moderators" class="btn btn--ghost btn--sm">Clear</a>{% endif %}
+      </form>
+
+      {% if q and not search_results %}
+        <p class="text-muted text-sm">No matching users (already staff, inactive, or not found).</p>
+      {% endif %}
+
+      {% if search_results %}
+        <table class="admin-table">
+          <thead>
+            <tr><th>User</th><th>Joined</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for u in search_results %}
+              <tr>
+                <td>
+                  <div style="font-weight:500">{{ u.display_name }}</div>
+                  <div class="text-xs text-muted">{{ u.email }}</div>
+                </td>
+                <td class="text-sm text-muted">{{ u.created_at.strftime('%b %d, %Y') }}</td>
+                <td>
+                  <form method="POST" action="/admin/moderators/{{ u.id }}/promote" style="display:inline">
+                    <button type="submit" class="btn btn--primary btn--xs"
+                            onclick="return confirm('Promote {{ u.display_name }} to moderator?')">
+                      Promote
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

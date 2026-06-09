@@ -3,7 +3,7 @@ from typing import Optional, Type
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -479,3 +479,146 @@ async def scraping_log(
             "current_user": current_user,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# User management  (7.4)
+# ---------------------------------------------------------------------------
+
+@router.get("/users", response_class=HTMLResponse)
+async def users_list(
+    request: Request,
+    q: Optional[str] = None,
+    page: int = 1,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    import math
+
+    stmt = select(User).order_by(User.created_at.desc())
+    if q:
+        like = f"%{q.strip()}%"
+        stmt = stmt.where(or_(User.email.ilike(like), User.full_name.ilike(like)))
+
+    total = await db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    per_page = 50
+    total_pages = max(1, math.ceil(total / per_page))
+    page = max(1, min(page, total_pages))
+
+    users = (
+        await db.execute(stmt.offset((page - 1) * per_page).limit(per_page))
+    ).scalars().all()
+
+    return templates.TemplateResponse(
+        request,
+        "admin/users.html",
+        {
+            "title": "Manage Users",
+            "users": users,
+            "q": q or "",
+            "page": page,
+            "total_pages": total_pages,
+            "total": total,
+            "current_user": current_user,
+        },
+    )
+
+
+@router.post("/users/{user_id}/toggle-active")
+async def toggle_user_active(
+    user_id: int,
+    q: Optional[str] = Form(None),
+    page: int = Form(1),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404)
+    if user.id == current_user.id:
+        return RedirectResponse("/admin/users?error=cannot_deactivate_self", status_code=303)
+    user.is_active = not user.is_active
+    await db.commit()
+    qs = f"?page={page}" + (f"&q={q}" if q else "")
+    return RedirectResponse(f"/admin/users{qs}", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Moderator management  (7.5)
+# ---------------------------------------------------------------------------
+
+@router.get("/moderators", response_class=HTMLResponse)
+async def moderators_list(
+    request: Request,
+    q: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    staff = (
+        await db.execute(
+            select(User)
+            .where(or_(User.is_admin == True, User.is_moderator == True))
+            .order_by(User.is_admin.desc(), User.full_name, User.email)
+        )
+    ).scalars().all()
+
+    search_results: list[User] = []
+    if q:
+        like = f"%{q.strip()}%"
+        search_results = (
+            await db.execute(
+                select(User)
+                .where(
+                    or_(User.email.ilike(like), User.full_name.ilike(like)),
+                    User.is_active == True,
+                    User.is_moderator == False,
+                    User.is_admin == False,
+                )
+                .order_by(User.full_name, User.email)
+                .limit(10)
+            )
+        ).scalars().all()
+
+    return templates.TemplateResponse(
+        request,
+        "admin/moderators.html",
+        {
+            "title": "Manage Moderators",
+            "staff": staff,
+            "search_results": search_results,
+            "q": q or "",
+            "current_user": current_user,
+        },
+    )
+
+
+@router.post("/moderators/{user_id}/promote")
+async def promote_moderator(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404)
+    user.is_moderator = True
+    await db.commit()
+    return RedirectResponse("/admin/moderators?success=promoted", status_code=303)
+
+
+@router.post("/moderators/{user_id}/demote")
+async def demote_moderator(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404)
+    if user.id == current_user.id:
+        return RedirectResponse("/admin/moderators?error=cannot_remove_self", status_code=303)
+    if user.is_admin:
+        return RedirectResponse("/admin/moderators?error=cannot_demote_admin", status_code=303)
+    user.is_moderator = False
+    await db.commit()
+    return RedirectResponse("/admin/moderators?success=demoted", status_code=303)

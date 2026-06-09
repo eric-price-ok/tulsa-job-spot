@@ -59,6 +59,8 @@
         {% elif s == 'job_saved' %}Your changes have been saved.
         {% elif s == 'approved' %}Approved.
         {% elif s == 'rejected' %}Rejected.
+        {% elif s == 'promoted' %}User promoted to moderator.
+        {% elif s == 'demoted' %}Moderator access removed.
         {% else %}Done.{% endif %}
       </div>
     </div>
@@ -72,7 +74,9 @@
         {% elif err == 'email_conflict' %}This email is already registered with a different sign-in method.
         {% elif err == 'already_requested' %}You have already submitted a request for this company.
         {% elif err == 'already_has_role' %}This person already has an active role at this company.
-        {% elif err == 'cannot_remove_self' %}You cannot remove your own admin role.
+        {% elif err == 'cannot_remove_self' %}You cannot remove your own role.
+        {% elif err == 'cannot_deactivate_self' %}You cannot deactivate your own account.
+        {% elif err == 'cannot_demote_admin' %}Admin accounts cannot be demoted from this page.
         {% else %}Something went wrong. Please try again.
         {% endif %}
       </div>

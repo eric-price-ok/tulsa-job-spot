@@ -10,6 +10,7 @@ _LEGAL_SUFFIX_RE = re.compile(
 def generate_slug(name: str) -> str:
     text = _LEGAL_SUFFIX_RE.sub("", name).strip()
     text = text.lower()
+    text = re.sub(r"['’‘]", "", text)  # strip apostrophes before hyphenating
     text = re.sub(r"[^a-z0-9]+", "-", text)
     return text.strip("-") or "company"
 

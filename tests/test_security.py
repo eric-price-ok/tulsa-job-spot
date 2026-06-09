@@ -5,7 +5,7 @@ import nh3
 from httpx import AsyncClient
 from itsdangerous import TimestampSigner
 
-from app.utils import is_safe_redirect, sanitize_url
+from app.utils import generate_slug, is_safe_redirect, sanitize_url
 
 
 def _make_session(data: dict) -> str:
@@ -13,6 +13,63 @@ def _make_session(data: dict) -> str:
     from app.config import settings
     payload = base64.b64encode(json.dumps(data).encode()).decode()
     return TimestampSigner(settings.SECRET_KEY).sign(payload).decode()
+
+
+# ---------------------------------------------------------------------------
+# generate_slug
+# ---------------------------------------------------------------------------
+
+def test_slug_basic():
+    assert generate_slug("Enduro Pipeline Services") == "enduro-pipeline-services"
+
+
+def test_slug_strips_llc():
+    assert generate_slug("Enduro Pipeline Services LLC") == "enduro-pipeline-services"
+
+
+def test_slug_strips_llc_with_dots():
+    assert generate_slug("Enduro Pipeline Services L.L.C.") == "enduro-pipeline-services"
+
+
+def test_slug_strips_comma_lp():
+    assert generate_slug("SomePartner, L.P.") == "somepartner"
+
+
+def test_slug_strips_inc_period():
+    assert generate_slug("Acme Inc.") == "acme"
+
+
+def test_slug_strips_corp():
+    assert generate_slug("Big Corp Corp.") == "big-corp"
+
+
+def test_slug_strips_co():
+    assert generate_slug("Acme Co.") == "acme"
+
+
+def test_slug_does_not_strip_co_mid_word():
+    # "Costco" ends with "co" but it's part of the word — must not be stripped
+    assert generate_slug("Costco") == "costco"
+
+
+def test_slug_strips_punctuation():
+    assert generate_slug("Jim's Pizza, Inc.") == "jims-pizza"
+
+
+def test_slug_no_legal_suffix():
+    assert generate_slug("Tulsa Tech") == "tulsa-tech"
+
+
+def test_slug_collapses_multiple_spaces():
+    assert generate_slug("Acme   Corporation") == "acme-corporation"
+
+
+def test_slug_strips_pllc():
+    assert generate_slug("Smith Law PLLC") == "smith-law"
+
+
+def test_slug_strips_llp():
+    assert generate_slug("Jones & Associates LLP") == "jones-associates"
 
 
 # ---------------------------------------------------------------------------

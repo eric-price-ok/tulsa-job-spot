@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from ..database import get_db
 from ..dependencies import get_current_user, require_user
+from ..utils import sanitize_url
 from ..models.company import Company, CompanyInvite, CompanySocial, UserCompanyRole
 from ..models.job import JobListing
 from ..models.reference import CompanyType, Industry, JobStatus
@@ -101,7 +102,7 @@ async def company_create_submit(
     company = Company(
         common_name=common_name,
         company_type=company_type_id,
-        website=website.strip() if website else None,
+        website=sanitize_url(website),
         description=description.strip() if description else None,
         approved=False,
     )

@@ -63,7 +63,7 @@
   {# CTA based on application method #}
   <div class="job-detail__cta">
     {% if job.job_status and job.job_status.name == 'active' and job.approved %}
-      {% if job.application_method == 'external_url' and job.posting_url %}
+      {% if job.application_method == 'external_url' and job.posting_url and (job.posting_url.startswith('http://') or job.posting_url.startswith('https://')) %}
         <a href="{{ job.posting_url }}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--lg">
           Apply on {{ job.company.common_name if job.company else 'company' }} website &rarr;
         </a>
@@ -92,7 +92,7 @@
   {# Job description #}
   {% if job.job_description %}
     <div class="job-detail__body">
-      {{ job.job_description | safe }}
+      {{ job.job_description }}
     </div>
   {% endif %}
 

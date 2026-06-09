@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/admin" class="text-muted text-sm">← Admin</a>
+    <h1 class="page-header__title">Job Functions &amp; Specialties</h1>
+  </div>
+
+  <!-- Add function -->
+  <div class="panel mb-4">
+    <div class="panel__header"><h2 class="panel__title">Add Function</h2></div>
+    <div class="panel__body">
+      <form method="POST" action="/admin/reference/functions/add" class="inline-form">
+        <input class="form-input" name="name" type="text" placeholder="Function name" required style="flex:1">
+        <button type="submit" class="btn btn--primary">Add</button>
+      </form>
+    </div>
+  </div>
+
+  {% for fn in functions %}
+    <div class="panel mb-3">
+      <div class="panel__header" style="display:flex;align-items:center;gap:1rem">
+        <h2 class="panel__title" style="flex:1">
+          {{ fn.name }}
+          {% if not fn.is_active %}
+            <span class="badge" style="margin-left:.5rem">Inactive</span>
+          {% endif %}
+        </h2>
+        <form method="POST" action="/admin/reference/functions/{{ fn.id }}/toggle">
+          <button type="submit" class="btn btn--ghost btn--sm">
+            {{ 'Enable' if not fn.is_active else 'Disable' }}
+          </button>
+        </form>
+      </div>
+      <div class="panel__body">
+
+        <!-- Specialties list -->
+        {% if fn.specialties %}
+          <div class="queue-list mb-3">
+            {% for spec in fn.specialties | sort(attribute='specialty') %}
+              <div class="queue-item">
+                <span class="{{ 'text-muted' if not spec.is_active }}">
+                  {{ spec.specialty }}
+                  {% if not spec.is_active %}<span class="badge" style="margin-left:.35rem">Inactive</span>{% endif %}
+                </span>
+                <form method="POST" action="/admin/reference/specialties/{{ spec.id }}/toggle">
+                  <button type="submit" class="btn btn--ghost btn--xs">
+                    {{ 'Enable' if not spec.is_active else 'Disable' }}
+                  </button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- Add specialty -->
+        <form method="POST" action="/admin/reference/functions/{{ fn.id }}/specialties/add"
+              class="inline-form">
+          <input class="form-input form-input--sm" name="name" type="text"
+                 placeholder="Add specialty…" style="flex:1">
+          <button type="submit" class="btn btn--outline btn--sm">Add</button>
+        </form>
+
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

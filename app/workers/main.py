@@ -8,6 +8,7 @@ from ..config import settings
 from ..database import AsyncSessionLocal
 from ..models.company import CompanyInvite
 from .email import send_notification_email
+from .scraper import check_listing_links, check_scrapers, run_scraper
 
 
 async def expire_invites(ctx: dict) -> None:
@@ -24,7 +25,11 @@ async def expire_invites(ctx: dict) -> None:
 
 
 class WorkerSettings:
-    functions = [send_notification_email]
-    cron_jobs = [cron(expire_invites, hour=2, minute=0)]
+    functions = [send_notification_email, run_scraper]
+    cron_jobs = [
+        cron(expire_invites,      hour=2,  minute=0),
+        cron(check_scrapers,      hour=3,  minute=0),
+        cron(check_listing_links, hour=4,  minute=0),
+    ]
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
     max_jobs = 10

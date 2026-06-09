@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/admin" class="text-muted text-sm">← Admin</a>
+    <h1 class="page-header__title">Served Cities</h1>
+    <p class="page-header__sub">Cities with <strong>is_served = on</strong> appear in job posting and search filters.</p>
+  </div>
+
+  <!-- Add city -->
+  <div class="panel mb-4">
+    <div class="panel__header"><h2 class="panel__title">Add City</h2></div>
+    <div class="panel__body">
+      <form method="POST" action="/admin/cities/add" class="inline-form">
+        <div class="form-group" style="flex:1;min-width:160px">
+          <input class="form-input" name="city_name" type="text" placeholder="City name" required>
+        </div>
+        <div class="form-group" style="flex:1;min-width:160px">
+          <select class="form-select" name="state_id">
+            <option value="">— State —</option>
+            {% for state in states %}
+              <option value="{{ state.id }}">{{ state.name }} ({{ state.abbreviation }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn--primary">Add &amp; Enable</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cities table -->
+  <div class="panel">
+    <div class="panel__header"><h2 class="panel__title">All Cities</h2></div>
+    <div class="panel__body" style="padding:0">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>City</th>
+            <th>State</th>
+            <th>Sort Order</th>
+            <th>Served</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for city in cities %}
+            <tr class="{{ 'row--active' if city.is_served }}">
+              <td><strong>{{ city.city_name }}</strong></td>
+              <td class="text-muted text-sm">
+                {{ city.state.abbreviation if city.state else '—' }}
+              </td>
+              <td>
+                <form method="POST" action="/admin/cities/{{ city.id }}/sort"
+                      class="inline-form" style="gap:.5rem">
+                  <input class="form-input form-input--sm" type="number" name="sort_order"
+                         value="{{ city.sort_order or '' }}" placeholder="—" style="width:70px">
+                  <button type="submit" class="btn btn--ghost btn--xs">Save</button>
+                </form>
+              </td>
+              <td>
+                {% if city.is_served %}
+                  <span class="badge badge--success">On</span>
+                {% else %}
+                  <span class="badge">Off</span>
+                {% endif %}
+              </td>
+              <td style="text-align:right">
+                <form method="POST" action="/admin/cities/{{ city.id }}/toggle-served">
+                  <button type="submit"
+                          class="btn btn--sm {{ 'btn--ghost' if city.is_served else 'btn--outline' }}">
+                    {{ 'Disable' if city.is_served else 'Enable' }}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 import app.models  # registers all ORM models with Base.metadata
 from app.models.base import Base
+from app.models.user import User
 from app.database import get_db
 
 TEST_DATABASE_URL = os.environ["DATABASE_URL"]
@@ -37,6 +38,20 @@ async def db(engine):
         yield session
         await session.close()
         await conn.rollback()
+
+
+@pytest.fixture
+async def user(db):
+    """A plain authenticated user with no company role or staff flags."""
+    u = User(
+        email="test@example.com",
+        full_name="Test User",
+        oauth_provider="test",
+        oauth_subject="test-subject-123",
+    )
+    db.add(u)
+    await db.flush()
+    return u
 
 
 @pytest.fixture

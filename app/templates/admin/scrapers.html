@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/admin" class="text-muted text-sm">← Admin</a>
+    <h1 class="page-header__title">Scraper Sources</h1>
+  </div>
+
+  <!-- Add source -->
+  <div class="panel mb-4">
+    <div class="panel__header"><h2 class="panel__title">Add Source</h2></div>
+    <div class="panel__body">
+      <form method="POST" action="/admin/scrapers/add" class="form-card" style="box-shadow:none;border:none;padding:0">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Name <span class="required-mark">*</span></label>
+            <input class="form-input" name="name" type="text" placeholder="e.g. Indeed — Tulsa" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Scraper Class <span class="required-mark">*</span></label>
+            <input class="form-input" name="scraper_class" type="text"
+                   placeholder="app.scrapers.indeed.IndeedScraper" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">URL <span class="required-mark">*</span></label>
+            <input class="form-input" name="url" type="url" placeholder="https://…" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Company (optional)</label>
+            <select class="form-select" name="company_id">
+              <option value="">— None —</option>
+              {% for c in companies %}
+                <option value="{{ c.id }}">{{ c.common_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cron Schedule</label>
+            <input class="form-input" name="cron_schedule" type="text"
+                   value="0 3 * * *" placeholder="0 3 * * *">
+            <p class="form-hint">Default: daily at 3 AM. Standard cron syntax.</p>
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:.5rem;padding-top:1.5rem">
+            <input type="checkbox" name="selenium_required" id="selenium_required" value="true">
+            <label for="selenium_required" class="form-label" style="margin:0">Requires Selenium</label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn--primary">Add Source</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sources list -->
+  {% if sources %}
+    <div class="queue-list">
+      {% for source in sources %}
+        <div class="panel mb-3">
+          <div class="panel__body">
+            <div class="queue-item queue-item--stacked">
+              <div class="queue-item__main">
+                <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+                  <h3 style="margin:0">{{ source.name }}</h3>
+                  {% if source.is_active %}
+                    <span class="badge badge--success">Active</span>
+                  {% else %}
+                    <span class="badge">Disabled</span>
+                  {% endif %}
+                  {% if source.selenium_required %}
+                    <span class="badge badge--warning">Selenium</span>
+                  {% endif %}
+                </div>
+                <div class="queue-item__meta">
+                  <span class="text-xs" style="font-family:monospace">{{ source.scraper_class }}</span>
+                  <span>{{ source.url | truncate(60) }}</span>
+                  {% if source.company %}<span>{{ source.company.common_name }}</span>{% endif %}
+                  <span>Schedule: {{ source.cron_schedule }}</span>
+                </div>
+                {% if source.last_run_at %}
+                  <div class="text-muted text-xs mt-1">
+                    Last run: {{ source.last_run_at.strftime('%b %d %H:%M') }}
+                    {% if source.last_status %}
+                      — <span class="{{ 'text-success' if source.last_status == 'success' else 'text-danger' }}">{{ source.last_status }}</span>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <div class="text-muted text-xs mt-1">Never run</div>
+                {% endif %}
+              </div>
+
+              <div class="queue-actions">
+                <form method="POST" action="/admin/scrapers/{{ source.id }}/run">
+                  <button type="submit" class="btn btn--primary btn--sm"
+                          {{ 'disabled' if not source.is_active }}>Run Now</button>
+                </form>
+                <form method="POST" action="/admin/scrapers/{{ source.id }}/toggle">
+                  <button type="submit" class="btn btn--ghost btn--sm">
+                    {{ 'Disable' if source.is_active else 'Enable' }}
+                  </button>
+                </form>
+                <a href="/admin/scraping-log?source={{ source.name | urlencode }}"
+                   class="btn btn--ghost btn--sm">Logs</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p class="empty-state__title">No scraper sources yet</p>
+      <p class="empty-state__text">Add a source above to start scraping job listings.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

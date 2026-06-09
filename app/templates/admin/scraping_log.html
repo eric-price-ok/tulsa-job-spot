@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/admin" class="text-muted text-sm">← Admin</a>
+    <h1 class="page-header__title">Scraping Log</h1>
+    <p class="page-header__sub">{{ total }} entries{% if source_filter %} for "{{ source_filter }}"{% endif %}</p>
+  </div>
+
+  <!-- Filter -->
+  <form method="GET" action="/admin/scraping-log" class="inline-form mb-4">
+    <select class="form-select" name="source" onchange="this.form.submit()">
+      <option value="">All sources</option>
+      {% for s in sources %}
+        <option value="{{ s }}" {{ 'selected' if s == source_filter }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    {% if source_filter %}
+      <a href="/admin/scraping-log" class="btn btn--ghost btn--sm">Clear</a>
+    {% endif %}
+  </form>
+
+  {% if logs %}
+    <div class="panel">
+      <div class="panel__body" style="padding:0">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Started</th>
+              <th>Duration</th>
+              <th>Status</th>
+              <th>Found</th>
+              <th>Added</th>
+              <th>Updated</th>
+              <th>Skipped</th>
+              <th>Errors</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+              <tr>
+                <td><strong>{{ log.job_board }}</strong></td>
+                <td class="text-sm text-muted">{{ log.started_at.strftime('%b %d %H:%M') }}</td>
+                <td class="text-sm text-muted">
+                  {% if log.duration_seconds is not none %}
+                    {{ log.duration_seconds }}s
+                  {% elif log.completed_at %}
+                    {{ ((log.completed_at - log.started_at).seconds) }}s
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge
+                    {% if log.status == 'success' %}badge--success
+                    {% elif log.status == 'running' %}badge--warning
+                    {% else %}badge{% endif %}">
+                    {{ log.status }}
+                  </span>
+                </td>
+                <td>{{ log.jobs_found }}</td>
+                <td>{{ log.jobs_added }}</td>
+                <td>{{ log.jobs_updated }}</td>
+                <td>{{ log.jobs_skipped }}</td>
+                <td>
+                  {% if log.errors %}
+                    <details>
+                      <summary class="text-danger text-xs" style="cursor:pointer">View</summary>
+                      <pre class="text-xs" style="white-space:pre-wrap;max-width:400px;margin-top:.5rem">{{ log.errors }}</pre>
+                    </details>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if total_pages > 1 %}
+      <div class="pagination mt-4">
+        {% if page > 1 %}
+          <a href="?page={{ page - 1 }}{% if source_filter %}&source={{ source_filter | urlencode }}{% endif %}" class="btn btn--ghost btn--sm">← Prev</a>
+        {% endif %}
+        <span class="text-muted text-sm">Page {{ page }} of {{ total_pages }}</span>
+        {% if page < total_pages %}
+          <a href="?page={{ page + 1 }}{% if source_filter %}&source={{ source_filter | urlencode }}{% endif %}" class="btn btn--ghost btn--sm">Next →</a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+  {% else %}
+    <div class="empty-state">
+      <p class="empty-state__title">No log entries</p>
+      <p class="empty-state__text">Scraping runs will appear here once scrapers have been triggered.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

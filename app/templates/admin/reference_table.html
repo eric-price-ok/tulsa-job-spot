@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="/admin" class="text-muted text-sm">← Admin</a>
+    <h1 class="page-header__title">{{ label }}</h1>
+  </div>
+
+  <!-- Add entry -->
+  <div class="panel mb-4">
+    <div class="panel__header"><h2 class="panel__title">Add Entry</h2></div>
+    <div class="panel__body">
+      <form method="POST" action="/admin/reference/{{ table }}/add" class="inline-form">
+        <input class="form-input" name="name" type="text" placeholder="Name" required style="flex:1">
+        <button type="submit" class="btn btn--primary">Add</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel__body" style="padding:0">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Name</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+            <tr>
+              <td>{{ entry.name }}</td>
+              <td>
+                {% if entry.is_active %}
+                  <span class="badge badge--success">Active</span>
+                {% else %}
+                  <span class="badge">Inactive</span>
+                {% endif %}
+              </td>
+              <td style="text-align:right">
+                <form method="POST"
+                      action="/admin/reference/{{ table }}/{{ entry.id }}/toggle">
+                  <button type="submit" class="btn btn--ghost btn--sm">
+                    {{ 'Disable' if entry.is_active else 'Enable' }}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

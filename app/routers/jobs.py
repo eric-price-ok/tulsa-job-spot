@@ -79,6 +79,7 @@ async def _load_form_data(db: AsyncSession) -> dict:
         await db.execute(
             select(City)
             .where(City.is_served == True)
+            .options(selectinload(City.state))
             .order_by(City.sort_order.nullslast(), City.city_name)
         )
     ).scalars().all()

@@ -32,6 +32,9 @@
         {% if current_user.is_staff %}
           <a href="/moderator" class="btn btn--outline btn--sm">Moderator</a>
         {% endif %}
+        {% if current_user.is_admin %}
+          <a href="/admin" class="btn btn--outline btn--sm">Admin</a>
+        {% endif %}
         <form method="POST" action="/auth/logout" style="margin:0">
           <button type="submit" class="btn btn--ghost btn--sm">Sign out</button>
         </form>

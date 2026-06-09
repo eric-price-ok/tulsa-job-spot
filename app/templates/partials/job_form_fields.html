@@ -101,7 +101,7 @@
         {% for city in served_cities %}
           <option value="{{ city.id }}"
             {{ 'selected' if job and job.city_id == city.id }}>
-            {{ city.city_name }}{% if city.state_code %}, {{ city.state_code }}{% endif %}
+            {{ city.city_name }}{% if city.state %}, {{ city.state.abbreviation }}{% endif %}
           </option>
         {% endfor %}
       </select>

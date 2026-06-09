@@ -7,6 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from .config import settings
+from .routers.admin import router as admin_router
 from .routers.auth import router as auth_router
 from .routers.companies import router as companies_router
 from .routers.jobs import router as jobs_router
@@ -45,6 +46,7 @@ app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(companies_router)
 app.include_router(moderator_router)
+app.include_router(admin_router)
 
 
 @app.get("/")

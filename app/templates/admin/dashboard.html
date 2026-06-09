@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-header__title">Admin</h1>
+  </div>
+
+  <div class="stat-cards mb-4">
+    <a href="/admin/cities" class="stat-card">
+      <div class="stat-card__value">{{ served_cities }}</div>
+      <div class="stat-card__label">Served Cities</div>
+    </a>
+    <a href="/admin/scrapers" class="stat-card {{ 'stat-card--alert' if active_scrapers == 0 }}">
+      <div class="stat-card__value">{{ active_scrapers }}</div>
+      <div class="stat-card__label">Active Scrapers</div>
+    </a>
+    <a href="/moderator/companies" class="stat-card {{ 'stat-card--alert' if pending_companies > 0 }}">
+      <div class="stat-card__value">{{ pending_companies }}</div>
+      <div class="stat-card__label">Pending Companies</div>
+    </a>
+    <a href="/moderator/roles" class="stat-card {{ 'stat-card--alert' if pending_roles > 0 }}">
+      <div class="stat-card__value">{{ pending_roles }}</div>
+      <div class="stat-card__label">Pending Roles</div>
+    </a>
+    <a href="/moderator/jobs" class="stat-card {{ 'stat-card--alert' if pending_jobs > 0 }}">
+      <div class="stat-card__value">{{ pending_jobs }}</div>
+      <div class="stat-card__label">Pending Listings</div>
+    </a>
+  </div>
+
+  <div class="admin-grid">
+
+    <div class="panel">
+      <div class="panel__header"><h2 class="panel__title">Data Management</h2></div>
+      <div class="panel__body">
+        <ul class="admin-link-list">
+          <li><a href="/admin/cities">Served Cities</a></li>
+          <li><a href="/admin/reference/functions">Job Functions &amp; Specialties</a></li>
+          <li><a href="/admin/reference/skills">Skills</a></li>
+          <li><a href="/admin/reference/job-types">Job Types</a></li>
+          <li><a href="/admin/reference/industries">Industries</a></li>
+          <li><a href="/admin/reference/office-locations">Office Locations</a></li>
+          <li><a href="/admin/reference/experience">Experience Levels</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__header"><h2 class="panel__title">Scrapers</h2></div>
+      <div class="panel__body">
+        <ul class="admin-link-list">
+          <li><a href="/admin/scrapers">Scraper Sources</a></li>
+          <li><a href="/admin/scraping-log">Scraping Log</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__header"><h2 class="panel__title">Moderation</h2></div>
+      <div class="panel__body">
+        <ul class="admin-link-list">
+          <li><a href="/moderator">Moderator Dashboard</a></li>
+          <li><a href="/moderator/companies">Company Queue</a></li>
+          <li><a href="/moderator/roles">Role Queue</a></li>
+          <li><a href="/moderator/jobs">Job Listing Queue</a></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  {% if recent_logs %}
+    <div class="panel mt-4">
+      <div class="panel__header">
+        <h2 class="panel__title">Recent Scraping Activity</h2>
+        <a href="/admin/scraping-log" class="panel__action">View all</a>
+      </div>
+      <div class="panel__body">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Source</th><th>Started</th><th>Status</th><th>Found</th><th>Added</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in recent_logs %}
+              <tr>
+                <td>{{ log.job_board }}</td>
+                <td class="text-muted text-sm">{{ log.started_at.strftime('%b %d %H:%M') }}</td>
+                <td><span class="badge {{ 'badge--success' if log.status == 'success' else 'badge--warning' if log.status == 'running' else 'badge' }}">{{ log.status }}</span></td>
+                <td>{{ log.jobs_found }}</td>
+                <td>{{ log.jobs_added }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

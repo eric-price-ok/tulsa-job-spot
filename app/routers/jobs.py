@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import List, Optional
 
+import nh3
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..config import settings
+from ..utils import sanitize_url
 from ..database import get_db
 from ..dependencies import get_current_user, require_user
 from ..models.company import Company, UserCompanyRole
@@ -266,9 +268,9 @@ async def job_create_submit(
         company_id=company_id,
         posted_by=current_user.id,
         job_title=job_title,
-        job_description=job_description.strip(),
+        job_description=nh3.clean(job_description.strip()),
         application_method=application_method,
-        posting_url=posting_url.strip() if posting_url else None,
+        posting_url=sanitize_url(posting_url),
         application_email=application_email.strip() if application_email else None,
         city_id=city_id or None,
         office_location_id=office_location_id or None,
@@ -403,9 +405,9 @@ async def job_edit_submit(
             return None
 
     job.job_title = job_title.strip()
-    job.job_description = job_description.strip()
+    job.job_description = nh3.clean(job_description.strip())
     job.application_method = application_method
-    job.posting_url = posting_url.strip() if posting_url else None
+    job.posting_url = sanitize_url(posting_url)
     job.application_email = application_email.strip() if application_email else None
     job.city_id = city_id or None
     job.office_location_id = office_location_id or None

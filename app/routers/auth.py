@@ -11,6 +11,7 @@ from ..config import settings
 from ..database import get_db
 from ..models.user import User
 from ..templates import templates
+from ..utils import is_safe_redirect
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -74,7 +75,8 @@ async def login_page(request: Request):
     if request.session.get("user_id"):
         return RedirectResponse(request.query_params.get("next", "/"))
     if next_url := request.query_params.get("next"):
-        request.session["next"] = next_url
+        if is_safe_redirect(next_url):
+            request.session["next"] = next_url
     return templates.TemplateResponse(
         request,
         "auth/login.html",
@@ -87,7 +89,8 @@ async def oauth_login(provider: str, request: Request):
     if provider not in settings.enabled_providers:
         return RedirectResponse("/auth/login")
     if next_url := request.query_params.get("next"):
-        request.session["next"] = next_url
+        if is_safe_redirect(next_url):
+            request.session["next"] = next_url
     client = oauth.create_client(provider)
     redirect_uri = str(request.url_for("oauth_callback", provider=provider))
     return await client.authorize_redirect(request, redirect_uri)
@@ -122,6 +125,8 @@ async def oauth_callback(provider: str, request: Request, db: AsyncSession = Dep
 
     request.session["user_id"] = user.id
     next_url = request.session.pop("next", "/")
+    if not is_safe_redirect(next_url):
+        next_url = "/"
     return RedirectResponse(next_url, status_code=303)
 
 

@@ -310,7 +310,7 @@ async def job_create_submit(
     )
 
     return RedirectResponse(
-        f"/companies/{company_id}/jobs?success=job_submitted", status_code=303
+        f"/companies/{company.slug}/jobs?success=job_submitted", status_code=303
     )
 
 
@@ -386,7 +386,7 @@ async def job_edit_submit(
     if job is None:
         raise HTTPException(status_code=404)
 
-    await _require_poster_role(job.company_id, current_user, db)
+    company = await _require_poster_role(job.company_id, current_user, db)
 
     def parse_salary(val: Optional[str]) -> Optional[Decimal]:
         if not val or not val.strip():
@@ -439,7 +439,7 @@ async def job_edit_submit(
     await db.commit()
 
     return RedirectResponse(
-        f"/companies/{job.company_id}/jobs?success=job_saved", status_code=303
+        f"/companies/{company.slug}/jobs?success=job_saved", status_code=303
     )
 
 
@@ -457,14 +457,14 @@ async def job_close(
     if job is None:
         raise HTTPException(status_code=404)
 
-    await _require_poster_role(job.company_id, current_user, db)
+    company = await _require_poster_role(job.company_id, current_user, db)
 
     closed_status_id = await _get_closed_status_id(db)
     job.job_status_id = closed_status_id
     await db.commit()
 
     return RedirectResponse(
-        f"/companies/{job.company_id}/jobs", status_code=303
+        f"/companies/{company.slug}/jobs", status_code=303
     )
 
 

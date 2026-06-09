@@ -1,4 +1,17 @@
+import re
 from urllib.parse import urlparse
+
+_LEGAL_SUFFIX_RE = re.compile(
+    r",?\s*\b(?:P\.?L\.?L\.?C|L\.?L\.?C|L\.?L\.?P|P\.?L\.?C|PLLC|LLP|LLC|PLC|L\.?P|LP|Inc|Ltd|Corp|Co|P\.?A|P\.?C)\.?\s*$",
+    re.IGNORECASE,
+)
+
+
+def generate_slug(name: str) -> str:
+    text = _LEGAL_SUFFIX_RE.sub("", name).strip()
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    return text.strip("-") or "company"
 
 
 def sanitize_url(url: str | None) -> str | None:

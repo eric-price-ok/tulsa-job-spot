@@ -27,7 +27,7 @@
       {% set hq = (company.sites | selectattr('is_headquarters', 'equalto', true) | list | first) or (company.sites | first) %}
       <tr>
         <td>
-          <a href="/companies/{{ company.id }}" class="table-link">{{ company.common_name }}</a>
+          <a href="/companies/{{ company.slug }}" class="table-link">{{ company.common_name }}</a>
           {% if company.is_scraped %}
             <span class="badge badge--scraped" title="Sourced by scraper">Scraped</span>
           {% endif %}

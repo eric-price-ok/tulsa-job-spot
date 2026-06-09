@@ -4,21 +4,35 @@
 {% block content %}
 <div class="container container--narrow">
   <div class="page-header">
-    <a href="/companies/{{ company.id }}/manage" class="text-muted text-sm">← Manage {{ company.common_name }}</a>
+    <a href="/companies/{{ company.slug }}/manage" class="text-muted text-sm">← Manage {{ company.common_name }}</a>
     <h1 class="page-header__title">Edit Company Profile</h1>
   </div>
 
   {# ── Basic company info ──────────────────────────────────────────────── #}
   <div class="form-card" style="max-width:100%">
-    <form method="POST" action="/companies/{{ company.id }}/edit">
+    <form method="POST" action="/companies/{{ company.slug }}/edit">
 
       <div class="form-section">
         <h2 class="form-section__title">Company Info</h2>
 
-        <div class="form-group">
+        {% if slug_collision %}
+        <div class="flash flash--warning" role="alert" style="margin-bottom:1.25rem">
+          <strong>URL conflict:</strong> The slug for <em>{{ pending_name }}</em> is already taken by another company.
+          Enter a custom URL suffix below, or change the company name and resubmit.
+          <div class="form-group mt-2">
+            <label class="form-label" for="custom_slug">Custom URL slug</label>
+            <input class="form-input" type="text" id="custom_slug" name="custom_slug"
+                   value="{{ suggested_slug }}" placeholder="{{ suggested_slug }}"
+                   pattern="[a-z0-9][a-z0-9-]*" maxlength="255">
+            <div class="form-hint">Preview: /companies/<strong>{{ suggested_slug }}</strong></div>
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="form-group">
           <label class="form-label" for="common_name">Company Name <span class="form-required">*</span></label>
           <input class="form-input" type="text" id="common_name" name="common_name"
-                 value="{{ company.common_name }}" required maxlength="255">
+                 value="{{ pending_name if slug_collision else company.common_name }}" required maxlength="255">
         </div>
 
         <div class="form-group">
@@ -85,7 +99,7 @@
 
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">Save Changes</button>
-        <a href="/companies/{{ company.id }}/manage" class="btn btn--ghost">Cancel</a>
+        <a href="/companies/{{ company.slug }}/manage" class="btn btn--ghost">Cancel</a>
       </div>
     </form>
   </div>
@@ -108,7 +122,7 @@
             </div>
             <div class="queue-item__actions">
               <form method="POST"
-                    action="/companies/{{ company.id }}/edit/socials/{{ social.id }}/remove"
+                    action="/companies/{{ company.slug }}/edit/socials/{{ social.id }}/remove"
                     onsubmit="return confirm('Remove this social link?')">
                 <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
               </form>
@@ -123,7 +137,7 @@
 
       <div style="margin-top:1.25rem">
         <h3 class="form-section__title">Add Social Link</h3>
-        <form method="POST" action="/companies/{{ company.id }}/edit/socials/add" class="inline-form">
+        <form method="POST" action="/companies/{{ company.slug }}/edit/socials/add" class="inline-form">
           <div class="form-group" style="min-width:160px">
             <select class="form-select form-input--sm" name="social_type_id" required>
               <option value="">Platform…</option>
@@ -167,7 +181,7 @@
             </div>
             <div class="queue-item__actions">
               <form method="POST"
-                    action="/companies/{{ company.id }}/edit/sites/{{ site.id }}/remove"
+                    action="/companies/{{ company.slug }}/edit/sites/{{ site.id }}/remove"
                     onsubmit="return confirm('Remove this location?')">
                 <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
               </form>
@@ -182,7 +196,7 @@
 
       <div style="margin-top:1.25rem">
         <h3 class="form-section__title">Add Location</h3>
-        <form method="POST" action="/companies/{{ company.id }}/edit/sites/add">
+        <form method="POST" action="/companies/{{ company.slug }}/edit/sites/add">
           <div class="form-row">
             <div class="form-group" style="flex:1;min-width:160px">
               <label class="form-label">City <span class="form-required">*</span></label>

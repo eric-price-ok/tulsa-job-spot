@@ -2,7 +2,7 @@
 {% block content %}
 <div class="container container--narrow">
   <div class="page-header">
-    <a href="/companies/{{ company.id }}/jobs" class="text-muted text-sm">← {{ company.common_name }} Listings</a>
+    <a href="/companies/{{ company.slug }}/jobs" class="text-muted text-sm">← {{ company.common_name }} Listings</a>
     <h1 class="page-header__title">Edit Job Listing</h1>
     {% if not job.approved %}
       <span class="badge badge--warning" style="margin-top:.5rem">Pending approval</span>
@@ -16,7 +16,7 @@
 
     <div class="form-actions">
       <button type="submit" class="btn btn--primary btn--lg">Save Changes</button>
-      <a href="/companies/{{ company.id }}/jobs" class="btn btn--ghost">Cancel</a>
+      <a href="/companies/{{ company.slug }}/jobs" class="btn btn--ghost">Cancel</a>
       <a href="/jobs/{{ job.id }}" class="btn btn--ghost" target="_blank">View Listing</a>
     </div>
 

@@ -32,7 +32,7 @@
     <h1 class="job-detail__title">{{ job.job_title }}</h1>
 
     {% if job.company %}
-      <a href="/companies/{{ job.company_id }}" class="job-detail__company-link">
+      <a href="/companies/{{ job.company.slug }}" class="job-detail__company-link">
         {{ job.company.common_name }}
       </a>
     {% endif %}

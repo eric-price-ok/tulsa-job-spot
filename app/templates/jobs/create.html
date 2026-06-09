@@ -3,7 +3,7 @@
 <div class="container container--narrow">
   <div class="page-header">
     {% if selected_company %}
-      <a href="/companies/{{ selected_company.id }}/manage" class="text-muted text-sm">← {{ selected_company.common_name }}</a>
+      <a href="/companies/{{ selected_company.slug }}/manage" class="text-muted text-sm">← {{ selected_company.common_name }}</a>
     {% endif %}
     <h1 class="page-header__title">Post a Job</h1>
     {% if selected_company %}
@@ -36,7 +36,7 @@
     <div class="form-actions">
       <button type="submit" class="btn btn--primary btn--lg">Submit for Review</button>
       {% if selected_company %}
-        <a href="/companies/{{ selected_company.id }}/manage" class="btn btn--ghost">Cancel</a>
+        <a href="/companies/{{ selected_company.slug }}/manage" class="btn btn--ghost">Cancel</a>
       {% else %}
         <a href="/companies/join" class="btn btn--ghost">Cancel</a>
       {% endif %}

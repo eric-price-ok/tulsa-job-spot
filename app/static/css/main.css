@@ -675,6 +675,19 @@ ul { list-style: none; }
 }
 .text-nowrap { white-space: nowrap; }
 
+.social-icons {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.social-icon-link {
+  display: inline-flex;
+  align-items: center;
+  opacity: .75;
+  transition: opacity .15s;
+}
+.social-icon-link:hover { opacity: 1; }
+
 /* ---------------------------------------------------------------------------
    Checkbox grid (industry checkboxes in edit form)
    --------------------------------------------------------------------------- */

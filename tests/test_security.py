@@ -9,9 +9,10 @@ from app.utils import is_safe_redirect, sanitize_url
 
 
 def _make_session(data: dict) -> str:
-    """Build a signed Starlette session cookie using the test secret key."""
+    """Build a signed Starlette session cookie using the app's actual secret key."""
+    from app.config import settings
     payload = base64.b64encode(json.dumps(data).encode()).decode()
-    return TimestampSigner("dev-secret-change-me").sign(payload).decode()
+    return TimestampSigner(settings.SECRET_KEY).sign(payload).decode()
 
 
 # ---------------------------------------------------------------------------
@@ -108,10 +109,9 @@ def test_nh3_preserves_safe_formatting():
 async def test_login_blocks_external_next_for_logged_in_user(client: AsyncClient, user):
     """Already-logged-in user visiting /auth/login?next=https://evil.com
     must be sent to / not to the external URL."""
-    cookie = _make_session({"user_id": user.id})
+    client.cookies.set("session", _make_session({"user_id": user.id}))
     response = await client.get(
         "/auth/login?next=https://evil.com",
-        cookies={"session": cookie},
         follow_redirects=False,
     )
     assert response.status_code in (302, 303, 307, 308)
@@ -121,10 +121,9 @@ async def test_login_blocks_external_next_for_logged_in_user(client: AsyncClient
 async def test_login_allows_safe_next_for_logged_in_user(client: AsyncClient, user):
     """Already-logged-in user visiting /auth/login?next=/jobs
     should be sent to /jobs."""
-    cookie = _make_session({"user_id": user.id})
+    client.cookies.set("session", _make_session({"user_id": user.id}))
     response = await client.get(
         "/auth/login?next=/jobs",
-        cookies={"session": cookie},
         follow_redirects=False,
     )
     assert response.status_code in (302, 303, 307, 308)

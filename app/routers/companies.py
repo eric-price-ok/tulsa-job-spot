@@ -762,6 +762,8 @@ async def company_edit_site_add(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
     city_id: Optional[int] = Form(None),
+    address1: Optional[str] = Form(None),
+    address2: Optional[str] = Form(None),
     phone: Optional[str] = Form(None),
     is_headquarters: Optional[str] = Form(None),
 ):
@@ -770,6 +772,8 @@ async def company_edit_site_add(
         db.add(CompanySite(
             company_id=company_id,
             city_id=city_id,
+            address1=address1.strip() if address1 and address1.strip() else None,
+            address2=address2.strip() if address2 and address2.strip() else None,
             phone=phone.strip() if phone and phone.strip() else None,
             is_headquarters=is_headquarters == "true",
             is_active=True,

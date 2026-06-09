@@ -158,6 +158,9 @@
                 <span class="badge badge--role">HQ</span>
               {% endif %}
               <strong>{{ site.city.city_name if site.city else '(no city)' }}</strong>
+              {% if site.address1 %}
+                <span class="text-muted text-sm">{{ site.address1 }}{% if site.address2 %}, {{ site.address2 }}{% endif %}</span>
+              {% endif %}
               {% if site.phone %}
                 <span class="text-muted text-sm">{{ site.phone }}</span>
               {% endif %}
@@ -179,23 +182,39 @@
 
       <div style="margin-top:1.25rem">
         <h3 class="form-section__title">Add Location</h3>
-        <form method="POST" action="/companies/{{ company.id }}/edit/sites/add" class="inline-form">
-          <div class="form-group" style="min-width:180px">
-            <select class="form-select form-input--sm" name="city_id" required>
-              <option value="">City…</option>
-              {% for city in served_cities %}
-                <option value="{{ city.id }}">{{ city.city_name }}</option>
-              {% endfor %}
-            </select>
+        <form method="POST" action="/companies/{{ company.id }}/edit/sites/add">
+          <div class="form-row">
+            <div class="form-group" style="flex:1;min-width:160px">
+              <label class="form-label">City <span class="form-required">*</span></label>
+              <select class="form-select" name="city_id" required>
+                <option value="">Select city…</option>
+                {% for city in served_cities %}
+                  <option value="{{ city.id }}">{{ city.city_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group" style="flex:1;min-width:160px">
+              <label class="form-label">Phone</label>
+              <input class="form-input" type="tel" name="phone"
+                     placeholder="(optional)" maxlength="50">
+            </div>
           </div>
-          <div class="form-group" style="min-width:150px">
-            <input class="form-input form-input--sm" type="tel" name="phone"
-                   placeholder="Phone (optional)" maxlength="50">
+          <div class="form-group">
+            <label class="form-label">Address Line 1</label>
+            <input class="form-input" type="text" name="address1"
+                   placeholder="123 Main St" maxlength="255">
           </div>
-          <label class="filter-checkbox" style="white-space:nowrap">
-            <input type="checkbox" name="is_headquarters" value="true"> Headquarters
-          </label>
-          <button type="submit" class="btn btn--primary btn--sm">Add</button>
+          <div class="form-group">
+            <label class="form-label">Address Line 2</label>
+            <input class="form-input" type="text" name="address2"
+                   placeholder="Suite 400 (optional)" maxlength="255">
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+            <label class="filter-checkbox">
+              <input type="checkbox" name="is_headquarters" value="true"> Mark as headquarters
+            </label>
+            <button type="submit" class="btn btn--primary btn--sm">Add Location</button>
+          </div>
         </form>
       </div>
     </div>

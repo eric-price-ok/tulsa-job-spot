@@ -675,6 +675,19 @@ ul { list-style: none; }
 }
 .text-nowrap { white-space: nowrap; }
 
+.social-icons {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.social-icon-link {
+  display: inline-flex;
+  align-items: center;
+  opacity: .75;
+  transition: opacity .15s;
+}
+.social-icon-link:hover { opacity: 1; }
+
 /* ---------------------------------------------------------------------------
    Checkbox grid (industry checkboxes in edit form)
    --------------------------------------------------------------------------- */
@@ -1206,6 +1219,13 @@ ul { list-style: none; }
   flex-wrap: wrap;
 }
 .inline-form .form-group { margin: 0; }
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.form-row .form-group { flex: 1; min-width: 140px; }
 
 .form-input--sm,
 .form-select--sm { padding: .3rem .6rem; font-size: .85rem; }

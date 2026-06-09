@@ -808,6 +808,7 @@ async def company_profile(
         select(Company)
         .where(Company.id == company_id)
         .options(
+            selectinload(Company.company_type_obj),
             selectinload(Company.sites),
             selectinload(Company.socials).selectinload(CompanySocial.social_type),
         )

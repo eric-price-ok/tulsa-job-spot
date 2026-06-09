@@ -4,11 +4,9 @@ Tests run against a dedicated `tulsajobspot_test` database — never the product
 
 ---
 
-## One-Time Setup
+## Setup
 
-These steps only need to be done once (or repeated after a full container rebuild).
-
-**1. Confirm your container names**
+### 1. Confirm your container names
 
 ```bash
 docker ps --format "table {{.Names}}\t{{.Status}}"
@@ -16,19 +14,33 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 
 You should see containers named `tulsa-job-spot-app-1` and `tulsa-job-spot-db-1`. If yours differ, substitute your actual names in the commands below.
 
-**2. Create the test database**
+### 2. Clone production data into the test database
+
+The test suite runs against a copy of the production database. Tests never modify production data — all writes are rolled back after each test via database-level savepoints.
+
+Run this before each test session to get a fresh snapshot:
 
 ```bash
-docker exec tulsa-job-spot-db-1 psql -U tulsajobspot -c "CREATE DATABASE tulsajobspot_test;"
+# Drop and recreate the test database
+docker exec tulsa-job-spot-db-1 psql -U tulsajobspot postgres \
+  -c "DROP DATABASE IF EXISTS tulsajobspot_test;"
+docker exec tulsa-job-spot-db-1 psql -U tulsajobspot postgres \
+  -c "CREATE DATABASE tulsajobspot_test;"
+
+# Copy production data into it
+docker exec tulsa-job-spot-db-1 bash -c \
+  "pg_dump -U tulsajobspot tulsajobspot | psql -U tulsajobspot tulsajobspot_test"
 ```
 
-**3. Install dev dependencies inside the app container**
+This is safe to run while the app is live — pg_dump takes a consistent snapshot without locking the production database.
+
+### 3. Install dev dependencies inside the app container
 
 ```bash
 docker exec tulsa-job-spot-app-1 pip install pytest pytest-asyncio
 ```
 
-These are not in the production requirements, so they must be installed after any container rebuild.
+These are not in the production requirements. Re-run this after any container rebuild.
 
 ---
 
@@ -101,8 +113,6 @@ docker exec tulsa-job-spot-app-1 \
 
 ## After a Git Pull / Deploy
 
-If you pull new code and restart containers:
-
-1. The test database persists (it is in the same Docker volume as the main database), so you do not need to recreate it.
-2. Re-run step 3 (pip install) if the container was rebuilt, since dev dependencies are not persisted in the image.
+1. If the container was rebuilt, re-run step 3 (pip install).
+2. If the pull included a new migration, re-clone the test database (step 2) so its schema matches production.
 3. Run the test suite before deciding whether to keep or revert the deployment.

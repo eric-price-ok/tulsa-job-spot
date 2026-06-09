@@ -1,11 +1,11 @@
 import math
 import secrets
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -15,7 +15,7 @@ from ..dependencies import get_current_user, require_user
 from ..utils import sanitize_url
 from ..models.company import Company, CompanyIndustry, CompanyInvite, CompanySite, CompanySocial, UserCompanyRole
 from ..models.job import JobListing
-from ..models.reference import CompanyType, Industry, JobStatus
+from ..models.reference import City, CompanyType, Industry, JobStatus, SocialMediaType
 from ..models.user import User
 from ..templates import templates
 from ..workers.email import enqueue_email
@@ -535,10 +535,8 @@ async def company_jobs_dashboard(
 @router.get("/companies", response_class=HTMLResponse)
 async def companies_index(
     request: Request,
-    q: str = "",
-    company_type_id: Optional[int] = None,
+    city_id: Optional[int] = None,
     industry_id: Optional[int] = None,
-    has_open_jobs: bool = False,
     page: int = 1,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
@@ -547,38 +545,29 @@ async def companies_index(
         select(Company)
         .where(Company.approved == True, Company.defunct == False)
         .options(
-            selectinload(Company.company_type_obj),
             selectinload(Company.sites).selectinload(CompanySite.city),
+            selectinload(Company.socials).selectinload(CompanySocial.social_type),
         )
     )
 
-    if q.strip():
-        like = f"%{q.strip()}%"
+    if city_id:
         stmt = stmt.where(
-            or_(
-                Company.common_name.ilike(like),
-                Company.description.ilike(like),
+            select(CompanySite.id)
+            .where(
+                CompanySite.company_id == Company.id,
+                CompanySite.city_id == city_id,
+                CompanySite.is_active == True,
             )
+            .correlate(Company)
+            .exists()
         )
-
-    if company_type_id:
-        stmt = stmt.where(Company.company_type == company_type_id)
 
     if industry_id:
-        stmt = stmt.join(
-            CompanyIndustry, CompanyIndustry.company_id == Company.id
-        ).where(CompanyIndustry.industry_id == industry_id).distinct()
-
-    if has_open_jobs:
-        active_status_id = await db.scalar(
-            select(JobStatus.id).where(JobStatus.name == "active")
-        )
         stmt = stmt.where(
-            select(JobListing.id)
+            select(CompanyIndustry.id)
             .where(
-                JobListing.company_id == Company.id,
-                JobListing.approved == True,
-                JobListing.job_status_id == active_status_id,
+                CompanyIndustry.company_id == Company.id,
+                CompanyIndustry.industry_id == industry_id,
             )
             .correlate(Company)
             .exists()
@@ -592,9 +581,19 @@ async def companies_index(
     stmt = stmt.order_by(Company.common_name).offset((page - 1) * ITEMS_PER_PAGE).limit(ITEMS_PER_PAGE)
     companies = (await db.execute(stmt)).scalars().all()
 
-    company_types = (
+    city_options = (
         await db.execute(
-            select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name)
+            select(City)
+            .join(CompanySite, CompanySite.city_id == City.id)
+            .join(Company, Company.id == CompanySite.company_id)
+            .where(
+                Company.approved == True,
+                Company.defunct == False,
+                CompanySite.is_active == True,
+                CompanySite.city_id.isnot(None),
+            )
+            .distinct()
+            .order_by(City.city_name)
         )
     ).scalars().all()
 
@@ -606,12 +605,7 @@ async def companies_index(
         )
     ).scalars().all()
 
-    filters = {
-        "q": q,
-        "company_type_id": company_type_id,
-        "industry_id": industry_id,
-        "has_open_jobs": has_open_jobs,
-    }
+    filters = {"city_id": city_id, "industry_id": industry_id}
 
     ctx = {
         "title": "Browse Companies",
@@ -620,7 +614,7 @@ async def companies_index(
         "page": page,
         "total_pages": total_pages,
         "filters": filters,
-        "company_types": company_types,
+        "city_options": city_options,
         "industries": industries,
         "current_user": current_user,
     }
@@ -628,6 +622,175 @@ async def companies_index(
     is_htmx = request.headers.get("HX-Request") == "true"
     template = "partials/company_list.html" if is_htmx else "companies/index.html"
     return templates.TemplateResponse(request, template, ctx)
+
+
+# ---------------------------------------------------------------------------
+# Edit company profile (company_admin only)
+# ---------------------------------------------------------------------------
+
+@router.get("/companies/{company_id}/edit", response_class=HTMLResponse)
+async def company_edit_form(
+    company_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    await _require_company_admin(company_id, current_user, db)
+
+    result = await db.execute(
+        select(Company)
+        .where(Company.id == company_id)
+        .options(
+            selectinload(Company.company_type_obj),
+            selectinload(Company.sites).selectinload(CompanySite.city),
+            selectinload(Company.socials).selectinload(CompanySocial.social_type),
+        )
+    )
+    company = result.scalar_one()
+
+    current_industry_ids = set(
+        (await db.execute(
+            select(CompanyIndustry.industry_id).where(CompanyIndustry.company_id == company_id)
+        )).scalars().all()
+    )
+
+    company_types = (await db.execute(
+        select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name)
+    )).scalars().all()
+
+    industries = (await db.execute(
+        select(Industry).where(Industry.is_active == True).order_by(Industry.name)
+    )).scalars().all()
+
+    social_types = (await db.execute(
+        select(SocialMediaType).order_by(SocialMediaType.name)
+    )).scalars().all()
+
+    served_cities = (await db.execute(
+        select(City)
+        .where(City.is_served == True)
+        .order_by(City.sort_order.nullslast(), City.city_name)
+    )).scalars().all()
+
+    return templates.TemplateResponse(
+        request,
+        "companies/edit.html",
+        {
+            "title": f"Edit — {company.common_name}",
+            "company": company,
+            "company_types": company_types,
+            "industries": industries,
+            "current_industry_ids": current_industry_ids,
+            "social_types": social_types,
+            "served_cities": served_cities,
+            "current_user": current_user,
+        },
+    )
+
+
+@router.post("/companies/{company_id}/edit")
+async def company_edit_submit(
+    company_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+    common_name: str = Form(...),
+    legal_name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    website: Optional[str] = Form(None),
+    jobboard: Optional[str] = Form(None),
+    company_size: Optional[str] = Form(None),
+    company_type_id: int = Form(...),
+    industry_ids: Optional[List[int]] = Form(None),
+):
+    company = await _require_company_admin(company_id, current_user, db)
+
+    company.common_name = common_name.strip()
+    company.legal_name = legal_name.strip() if legal_name and legal_name.strip() else None
+    company.description = description.strip() if description and description.strip() else None
+    company.website = sanitize_url(website) if website and website.strip() else None
+    company.jobboard = sanitize_url(jobboard) if jobboard and jobboard.strip() else None
+    company.company_size = company_size.strip() if company_size and company_size.strip() else None
+    company.company_type = company_type_id
+
+    await db.execute(delete(CompanyIndustry).where(CompanyIndustry.company_id == company_id))
+    for ind_id in (industry_ids or []):
+        db.add(CompanyIndustry(company_id=company_id, industry_id=ind_id))
+
+    await db.commit()
+    return RedirectResponse(f"/companies/{company_id}/edit?success=saved", status_code=303)
+
+
+@router.post("/companies/{company_id}/edit/socials/add")
+async def company_edit_social_add(
+    company_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+    social_type_id: int = Form(...),
+    company_url: str = Form(...),
+):
+    await _require_company_admin(company_id, current_user, db)
+    url = sanitize_url(company_url.strip())
+    if url:
+        db.add(CompanySocial(
+            company_id=company_id,
+            social_media_type_id=social_type_id,
+            company_url=url,
+            is_active=True,
+        ))
+        await db.commit()
+    return RedirectResponse(f"/companies/{company_id}/edit", status_code=303)
+
+
+@router.post("/companies/{company_id}/edit/socials/{social_id}/remove")
+async def company_edit_social_remove(
+    company_id: int,
+    social_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    await _require_company_admin(company_id, current_user, db)
+    social = await db.get(CompanySocial, social_id)
+    if social and social.company_id == company_id:
+        await db.delete(social)
+        await db.commit()
+    return RedirectResponse(f"/companies/{company_id}/edit", status_code=303)
+
+
+@router.post("/companies/{company_id}/edit/sites/add")
+async def company_edit_site_add(
+    company_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+    city_id: Optional[int] = Form(None),
+    phone: Optional[str] = Form(None),
+    is_headquarters: Optional[str] = Form(None),
+):
+    await _require_company_admin(company_id, current_user, db)
+    if city_id:
+        db.add(CompanySite(
+            company_id=company_id,
+            city_id=city_id,
+            phone=phone.strip() if phone and phone.strip() else None,
+            is_headquarters=is_headquarters == "true",
+            is_active=True,
+        ))
+        await db.commit()
+    return RedirectResponse(f"/companies/{company_id}/edit", status_code=303)
+
+
+@router.post("/companies/{company_id}/edit/sites/{site_id}/remove")
+async def company_edit_site_remove(
+    company_id: int,
+    site_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    await _require_company_admin(company_id, current_user, db)
+    site = await db.get(CompanySite, site_id)
+    if site and site.company_id == company_id:
+        await db.delete(site)
+        await db.commit()
+    return RedirectResponse(f"/companies/{company_id}/edit", status_code=303)
 
 
 # ---------------------------------------------------------------------------

@@ -5,103 +5,52 @@
 <div class="container">
   <div class="page-header">
     <h1 class="page-header__title">Companies in Tulsa</h1>
-    <p class="page-header__sub">Explore local employers hiring on {{ settings.SITE_NAME }}</p>
+    <p class="page-header__sub">Local employers on {{ settings.SITE_NAME }}</p>
   </div>
 
-  <div class="browse-layout">
+  <form
+    id="search-form"
+    method="GET"
+    action="/companies"
+    hx-get="/companies"
+    hx-target="#company-results"
+    hx-push-url="true"
+    hx-trigger="change from:select, submit"
+    hx-indicator="#search-spinner"
+  >
+    <div class="filter-bar">
+      {% if city_options %}
+      <select name="city_id" aria-label="Filter by city">
+        <option value="">All cities</option>
+        {% for city in city_options %}
+        <option value="{{ city.id }}" {% if filters.city_id == city.id %}selected{% endif %}>
+          {{ city.city_name }}
+        </option>
+        {% endfor %}
+      </select>
+      {% endif %}
 
-    {# ---- Sidebar filters ---- #}
-    <aside class="browse-sidebar" aria-label="Search filters">
-      <form
-        id="search-form"
-        method="GET"
-        action="/companies"
-        hx-get="/companies"
-        hx-target="#company-results"
-        hx-push-url="true"
-        hx-trigger="change from:select, change from:input[type=checkbox], submit"
-        hx-indicator="#search-spinner"
-      >
-        {# Keyword search #}
-        <div class="search-bar">
-          <input
-            type="search"
-            name="q"
-            value="{{ filters.q }}"
-            placeholder="Company name or keyword"
-            aria-label="Search companies"
-            hx-get="/companies"
-            hx-target="#company-results"
-            hx-push-url="true"
-            hx-trigger="keyup changed delay:400ms"
-            hx-include="#search-form"
-          >
-          <button type="submit" class="btn btn--primary" aria-label="Search">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M9 3a6 6 0 100 12A6 6 0 009 3zM1 9a8 8 0 1114.32 4.906l3.387 3.387a1 1 0 01-1.414 1.414l-3.387-3.387A8 8 0 011 9z" clip-rule="evenodd"/>
-            </svg>
-          </button>
-        </div>
+      {% if industries %}
+      <select name="industry_id" aria-label="Filter by industry">
+        <option value="">All industries</option>
+        {% for ind in industries %}
+        <option value="{{ ind.id }}" {% if filters.industry_id == ind.id %}selected{% endif %}>
+          {{ ind.name }}
+        </option>
+        {% endfor %}
+      </select>
+      {% endif %}
 
-        {# Company type filter #}
-        {% if company_types %}
-        <div class="filter-section">
-          <div class="filter-section__label">Company Type</div>
-          <select name="company_type_id">
-            <option value="">All types</option>
-            {% for ct in company_types %}
-            <option value="{{ ct.id }}" {% if filters.company_type_id == ct.id %}selected{% endif %}>
-              {{ ct.name }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
+      <span id="search-spinner" class="htmx-indicator text-muted text-sm">Loading…</span>
 
-        {# Industry filter #}
-        {% if industries %}
-        <div class="filter-section">
-          <div class="filter-section__label">Industry</div>
-          <select name="industry_id">
-            <option value="">All industries</option>
-            {% for ind in industries %}
-            <option value="{{ ind.id }}" {% if filters.industry_id == ind.id %}selected{% endif %}>
-              {{ ind.name }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
-
-        {# Has open jobs toggle #}
-        <div class="filter-section">
-          <label class="filter-checkbox">
-            <input
-              type="checkbox"
-              name="has_open_jobs"
-              value="true"
-              {% if filters.has_open_jobs %}checked{% endif %}
-            >
-            Hiring now
-          </label>
-        </div>
-
-        {# Reset link #}
-        {% if filters.q or filters.company_type_id or filters.industry_id or filters.has_open_jobs %}
-        <a href="/companies" class="btn btn--ghost btn--sm" style="width:100%;justify-content:center;margin-top:.5rem">
-          Clear filters
-        </a>
-        {% endif %}
-      </form>
-    </aside>
-
-    {# ---- Results ---- #}
-    <div>
-      <div id="company-results">
-        {% include "partials/company_list.html" %}
-      </div>
+      {% if filters.city_id or filters.industry_id %}
+      <a href="/companies" class="btn btn--ghost btn--sm">Clear filters</a>
+      {% endif %}
     </div>
+  </form>
 
+  <div id="company-results">
+    {% include "partials/company_list.html" %}
   </div>
 </div>
 {% endblock %}

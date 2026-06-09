@@ -1,17 +1,19 @@
+import math
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from ..config import settings
 from ..database import get_db
 from ..dependencies import get_current_user, require_user
 from ..utils import sanitize_url
-from ..models.company import Company, CompanyInvite, CompanySocial, UserCompanyRole
+from ..models.company import Company, CompanyIndustry, CompanyInvite, CompanySite, CompanySocial, UserCompanyRole
 from ..models.job import JobListing
 from ..models.reference import CompanyType, Industry, JobStatus
 from ..models.user import User
@@ -19,6 +21,8 @@ from ..templates import templates
 from ..workers.email import enqueue_email
 
 router = APIRouter(tags=["companies"])
+
+ITEMS_PER_PAGE = settings.ITEMS_PER_PAGE
 
 
 # ---------------------------------------------------------------------------
@@ -522,6 +526,108 @@ async def company_jobs_dashboard(
             "current_user": current_user,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Browse companies (anonymous)
+# ---------------------------------------------------------------------------
+
+@router.get("/companies", response_class=HTMLResponse)
+async def companies_index(
+    request: Request,
+    q: str = "",
+    company_type_id: Optional[int] = None,
+    industry_id: Optional[int] = None,
+    has_open_jobs: bool = False,
+    page: int = 1,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    stmt = (
+        select(Company)
+        .where(Company.approved == True, Company.defunct == False)
+        .options(
+            selectinload(Company.company_type_obj),
+            selectinload(Company.sites).selectinload(CompanySite.city),
+        )
+    )
+
+    if q.strip():
+        like = f"%{q.strip()}%"
+        stmt = stmt.where(
+            or_(
+                Company.common_name.ilike(like),
+                Company.description.ilike(like),
+            )
+        )
+
+    if company_type_id:
+        stmt = stmt.where(Company.company_type == company_type_id)
+
+    if industry_id:
+        stmt = stmt.join(
+            CompanyIndustry, CompanyIndustry.company_id == Company.id
+        ).where(CompanyIndustry.industry_id == industry_id).distinct()
+
+    if has_open_jobs:
+        active_status_id = await db.scalar(
+            select(JobStatus.id).where(JobStatus.name == "active")
+        )
+        stmt = stmt.where(
+            select(JobListing.id)
+            .where(
+                JobListing.company_id == Company.id,
+                JobListing.approved == True,
+                JobListing.job_status_id == active_status_id,
+            )
+            .correlate(Company)
+            .exists()
+        )
+
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = await db.scalar(count_stmt) or 0
+    total_pages = max(1, math.ceil(total / ITEMS_PER_PAGE))
+    page = max(1, min(page, total_pages))
+
+    stmt = stmt.order_by(Company.common_name).offset((page - 1) * ITEMS_PER_PAGE).limit(ITEMS_PER_PAGE)
+    companies = (await db.execute(stmt)).scalars().all()
+
+    company_types = (
+        await db.execute(
+            select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name)
+        )
+    ).scalars().all()
+
+    industries = (
+        await db.execute(
+            select(Industry)
+            .where(Industry.is_active == True)
+            .order_by(Industry.sort_order.nullslast(), Industry.name)
+        )
+    ).scalars().all()
+
+    filters = {
+        "q": q,
+        "company_type_id": company_type_id,
+        "industry_id": industry_id,
+        "has_open_jobs": has_open_jobs,
+    }
+
+    ctx = {
+        "title": "Browse Companies",
+        "companies": companies,
+        "total": total,
+        "page": page,
+        "total_pages": total_pages,
+        "filters": filters,
+        "company_types": company_types,
+        "industries": industries,
+        "current_user": current_user,
+    }
+
+    is_htmx = request.headers.get("HX-Request") == "true"
+    template = "partials/company_list.html" if is_htmx else "companies/index.html"
+    return templates.TemplateResponse(request, template, ctx)
 
 
 # ---------------------------------------------------------------------------

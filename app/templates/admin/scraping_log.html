@@ -9,7 +9,7 @@
 
   <!-- Filter -->
   <form method="GET" action="/admin/scraping-log" class="inline-form mb-4">
-    <select class="form-select" name="source" onchange="this.form.submit()">
+    <select class="form-select" id="source" name="source" onchange="this.form.submit()">
       <option value="">All sources</option>
       {% for s in sources %}
         <option value="{{ s }}" {{ 'selected' if s == source_filter }}>{{ s }}</option>

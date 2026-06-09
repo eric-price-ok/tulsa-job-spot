@@ -1,3 +1,5 @@
+import hashlib
+import os
 from datetime import datetime
 
 from fastapi.templating import Jinja2Templates
@@ -10,6 +12,16 @@ templates = Jinja2Templates(directory="app/templates")
 templates.env.globals["settings"] = settings
 templates.env.globals["enabled_providers"] = settings.enabled_providers
 templates.env.globals["now"] = datetime.now
+
+def _css_fingerprint() -> str:
+    path = os.path.join(os.path.dirname(__file__), "static", "css", "main.css")
+    try:
+        with open(path, "rb") as f:
+            return hashlib.md5(f.read()).hexdigest()[:8]
+    except OSError:
+        return "0"
+
+templates.env.globals["css_v"] = _css_fingerprint()
 
 
 def _format_phone(value: str | None) -> str:

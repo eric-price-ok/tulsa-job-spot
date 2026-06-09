@@ -61,7 +61,7 @@
     <div class="panel__header"><h2 class="panel__title">Promote a User to Moderator</h2></div>
     <div class="panel__body">
       <form method="GET" action="/admin/moderators" class="inline-form mb-3">
-        <input class="form-input" name="q" type="search" value="{{ q }}"
+        <input class="form-input" id="q" name="q" type="search" value="{{ q }}"
                placeholder="Search by name or email…" style="max-width:24rem">
         <button type="submit" class="btn btn--outline btn--sm">Search</button>
         {% if q %}<a href="/admin/moderators" class="btn btn--ghost btn--sm">Clear</a>{% endif %}

@@ -11,7 +11,7 @@
     <div class="panel__header"><h2 class="panel__title">Add Function</h2></div>
     <div class="panel__body">
       <form method="POST" action="/admin/reference/functions/add" class="inline-form">
-        <input class="form-input" name="name" type="text" placeholder="Function name" required style="flex:1">
+        <input class="form-input" id="function_name" name="name" type="text" placeholder="Function name" required style="flex:1">
         <button type="submit" class="btn btn--primary">Add</button>
       </form>
     </div>
@@ -56,7 +56,7 @@
         <!-- Add specialty -->
         <form method="POST" action="/admin/reference/functions/{{ fn.id }}/specialties/add"
               class="inline-form">
-          <input class="form-input form-input--sm" name="name" type="text"
+          <input class="form-input form-input--sm" id="specialty_name_{{ fn.id }}" name="name" type="text"
                  placeholder="Add specialty…" style="flex:1">
           <button type="submit" class="btn btn--outline btn--sm">Add</button>
         </form>

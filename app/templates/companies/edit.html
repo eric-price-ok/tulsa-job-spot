@@ -88,7 +88,7 @@
         <div class="checkbox-grid">
           {% for ind in industries %}
           <label class="filter-checkbox">
-            <input type="checkbox" name="industry_ids" value="{{ ind.id }}"
+            <input type="checkbox" id="industry_{{ ind.id }}" name="industry_ids" value="{{ ind.id }}"
                    {% if ind.id in current_industry_ids %}checked{% endif %}>
             {{ ind.name }}
           </label>
@@ -139,7 +139,7 @@
         <h3 class="form-section__title">Add Social Link</h3>
         <form method="POST" action="/companies/{{ company.slug }}/edit/socials/add" class="inline-form">
           <div class="form-group" style="min-width:160px">
-            <select class="form-select form-input--sm" name="social_type_id" required>
+            <select class="form-select form-input--sm" id="social_type_id" name="social_type_id" required>
               <option value="">Platform…</option>
               {% for st in social_types %}
                 <option value="{{ st.id }}">{{ st.name }}</option>
@@ -147,7 +147,7 @@
             </select>
           </div>
           <div class="form-group" style="flex:1">
-            <input class="form-input form-input--sm" type="url" name="company_url"
+            <input class="form-input form-input--sm" id="social_company_url" type="url" name="company_url"
                    placeholder="https://linkedin.com/company/…" required maxlength="500">
           </div>
           <button type="submit" class="btn btn--primary btn--sm">Add</button>
@@ -200,7 +200,7 @@
           <div class="form-row">
             <div class="form-group" style="flex:1;min-width:160px">
               <label class="form-label">City <span class="form-required">*</span></label>
-              <select class="form-select" name="city_id" required>
+              <select class="form-select" id="location_city_id" name="city_id" required>
                 <option value="">Select city…</option>
                 {% for city in served_cities %}
                   <option value="{{ city.id }}">{{ city.city_name }}</option>
@@ -209,23 +209,23 @@
             </div>
             <div class="form-group" style="flex:1;min-width:160px">
               <label class="form-label">Phone</label>
-              <input class="form-input" type="tel" name="phone"
+              <input class="form-input" id="location_phone" type="tel" name="phone"
                      placeholder="(optional)" maxlength="50">
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">Address Line 1</label>
-            <input class="form-input" type="text" name="address1"
+            <input class="form-input" id="location_address1" type="text" name="address1"
                    placeholder="123 Main St" maxlength="255">
           </div>
           <div class="form-group">
             <label class="form-label">Address Line 2</label>
-            <input class="form-input" type="text" name="address2"
+            <input class="form-input" id="location_address2" type="text" name="address2"
                    placeholder="Suite 400 (optional)" maxlength="255">
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
             <label class="filter-checkbox">
-              <input type="checkbox" name="is_headquarters" value="true"> Mark as headquarters
+              <input type="checkbox" id="location_is_headquarters" name="is_headquarters" value="true"> Mark as headquarters
             </label>
             <button type="submit" class="btn btn--primary btn--sm">Add Location</button>
           </div>

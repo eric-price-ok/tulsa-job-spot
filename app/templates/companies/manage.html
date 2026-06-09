@@ -3,7 +3,7 @@
 <div class="container">
   <div class="page-header">
     <div class="flex items-center gap-2">
-      <a href="/companies/{{ company.id }}" class="text-muted text-sm">← {{ company.common_name }}</a>
+      <a href="/companies/{{ company.slug }}" class="text-muted text-sm">← {{ company.common_name }}</a>
     </div>
     <h1 class="page-header__title">Manage Company</h1>
     <p class="page-header__sub">{{ company.common_name }}</p>
@@ -18,7 +18,7 @@
           <strong>Company Profile</strong>
           <div class="text-muted text-sm">Update details, social links, and locations</div>
         </div>
-        <a href="/companies/{{ company.id }}/edit" class="btn btn--outline btn--sm">Edit Profile</a>
+        <a href="/companies/{{ company.slug }}/edit" class="btn btn--outline btn--sm">Edit Profile</a>
       </div>
     </div>
 
@@ -40,7 +40,7 @@
                 <div class="queue-item__actions">
                   {% if role.user_id != current_user.id %}
                     <form method="POST"
-                          action="/companies/{{ company.id }}/posters/{{ role.id }}/remove"
+                          action="/companies/{{ company.slug }}/posters/{{ role.id }}/remove"
                           onsubmit="return confirm('Remove {{ role.user.display_name }} from this company?')">
                       <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
                     </form>
@@ -64,7 +64,7 @@
         <p class="panel__sub">Send an invite link to someone's email address. Expires in 7 days.</p>
       </div>
       <div class="panel__body">
-        <form method="POST" action="/companies/{{ company.id }}/invite" class="invite-form">
+        <form method="POST" action="/companies/{{ company.slug }}/invite" class="invite-form">
           <div class="form-group" style="flex:1">
             <input class="form-input" type="email" name="invited_email"
                    placeholder="colleague@example.com" required>
@@ -83,7 +83,7 @@
                 </div>
                 <div class="queue-item__actions">
                   <form method="POST"
-                        action="/companies/{{ company.id }}/invites/{{ invite.id }}/revoke">
+                        action="/companies/{{ company.slug }}/invites/{{ invite.id }}/revoke">
                     <button type="submit" class="btn btn--ghost btn--sm">Revoke</button>
                   </form>
                 </div>
@@ -101,7 +101,7 @@
       </div>
       <div class="panel__body" style="display:flex;align-items:center;gap:1rem">
         <a href="/jobs/create?company_id={{ company.id }}" class="btn btn--primary">Post a Job</a>
-        <a href="/companies/{{ company.id }}/jobs" class="btn btn--outline">View All Listings</a>
+        <a href="/companies/{{ company.slug }}/jobs" class="btn btn--outline">View All Listings</a>
       </div>
     </div>
 

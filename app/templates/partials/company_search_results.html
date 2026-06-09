@@ -20,7 +20,7 @@
               <span class="badge badge--warning">Request pending</span>
             {% endif %}
           {% else %}
-            <form method="POST" action="/companies/{{ company.id }}/request-role" style="margin:0">
+            <form method="POST" action="/companies/{{ company.slug }}/request-role" style="margin:0">
               <button type="submit" class="btn btn--outline btn--sm">Request to Join</button>
             </form>
           {% endif %}

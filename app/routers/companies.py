@@ -1,4 +1,5 @@
 import math
+import re
 import secrets
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -12,7 +13,7 @@ from sqlalchemy.orm import selectinload
 from ..config import settings
 from ..database import get_db
 from ..dependencies import get_current_user, require_user
-from ..utils import sanitize_url
+from ..utils import generate_slug, sanitize_url
 from ..models.company import Company, CompanyIndustry, CompanyInvite, CompanySite, CompanySocial, UserCompanyRole
 from ..models.job import JobListing
 from ..models.reference import City, CompanyType, Industry, JobStatus, SocialMediaType
@@ -30,11 +31,11 @@ ITEMS_PER_PAGE = settings.ITEMS_PER_PAGE
 # ---------------------------------------------------------------------------
 
 async def _require_company_admin(
-    company_id: int,
+    company_slug: str,
     current_user: User,
     db: AsyncSession,
 ) -> Company:
-    company = await db.get(Company, company_id)
+    company = await db.scalar(select(Company).where(Company.slug == company_slug))
     if company is None:
         raise HTTPException(status_code=404)
     if current_user.is_staff:
@@ -42,7 +43,7 @@ async def _require_company_admin(
     role = await db.scalar(
         select(UserCompanyRole).where(
             UserCompanyRole.user_id == current_user.id,
-            UserCompanyRole.company_id == company_id,
+            UserCompanyRole.company_id == company.id,
             UserCompanyRole.role == "company_admin",
             UserCompanyRole.approved == True,
         )
@@ -103,8 +104,16 @@ async def company_create_submit(
     if not common_name:
         raise HTTPException(status_code=400, detail="Company name is required")
 
+    base_slug = generate_slug(common_name)
+    slug = base_slug
+    counter = 2
+    while await db.scalar(select(Company.id).where(Company.slug == slug)):
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
     company = Company(
         common_name=common_name,
+        slug=slug,
         company_type=company_type_id,
         website=sanitize_url(website),
         description=description.strip() if description else None,
@@ -204,20 +213,20 @@ async def company_search_partial(
     )
 
 
-@router.post("/companies/{company_id}/request-role")
+@router.post("/companies/{company_slug}/request-role")
 async def request_company_role(
-    company_id: int,
+    company_slug: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
-    company = await db.get(Company, company_id)
+    company = await db.scalar(select(Company).where(Company.slug == company_slug))
     if company is None or not company.approved or company.defunct:
         raise HTTPException(status_code=404)
 
     existing = await db.scalar(
         select(UserCompanyRole).where(
             UserCompanyRole.user_id == current_user.id,
-            UserCompanyRole.company_id == company_id,
+            UserCompanyRole.company_id == company.id,
         )
     )
     if existing:
@@ -225,7 +234,7 @@ async def request_company_role(
 
     role = UserCompanyRole(
         user_id=current_user.id,
-        company_id=company_id,
+        company_id=company.id,
         role="job_poster",
         approved=False,
     )
@@ -234,7 +243,7 @@ async def request_company_role(
 
     await enqueue_email(
         "role_requested",
-        {"company_name": company.common_name, "requested_by": current_user.email, "company_id": company_id},
+        {"company_name": company.common_name, "requested_by": current_user.email, "company_id": company.id},
     )
 
     return RedirectResponse("/companies/pending?success=role_requested", status_code=303)
@@ -260,20 +269,20 @@ async def company_pending(
 # Company management (company_admin view)
 # ---------------------------------------------------------------------------
 
-@router.get("/companies/{company_id}/manage", response_class=HTMLResponse)
+@router.get("/companies/{company_slug}/manage", response_class=HTMLResponse)
 async def company_manage(
-    company_id: int,
+    company_slug: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
-    company = await _require_company_admin(company_id, current_user, db)
+    company = await _require_company_admin(company_slug, current_user, db)
 
     posters = (
         await db.execute(
             select(UserCompanyRole)
             .where(
-                UserCompanyRole.company_id == company_id,
+                UserCompanyRole.company_id == company.id,
                 UserCompanyRole.approved == True,
             )
             .options(selectinload(UserCompanyRole.user))
@@ -285,7 +294,7 @@ async def company_manage(
         await db.execute(
             select(CompanyInvite)
             .where(
-                CompanyInvite.company_id == company_id,
+                CompanyInvite.company_id == company.id,
                 CompanyInvite.accepted == False,
                 CompanyInvite.expires_at > datetime.now(),
             )
@@ -306,35 +315,33 @@ async def company_manage(
     )
 
 
-@router.post("/companies/{company_id}/invite")
+@router.post("/companies/{company_slug}/invite")
 async def send_company_invite(
-    company_id: int,
+    company_slug: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
     invited_email: str = Form(...),
 ):
-    company = await _require_company_admin(company_id, current_user, db)
+    company = await _require_company_admin(company_slug, current_user, db)
     invited_email = invited_email.strip().lower()
 
-    # Check if user already has an active role here
     existing_user = await db.scalar(select(User).where(User.email == invited_email))
     if existing_user:
         existing_role = await db.scalar(
             select(UserCompanyRole).where(
                 UserCompanyRole.user_id == existing_user.id,
-                UserCompanyRole.company_id == company_id,
+                UserCompanyRole.company_id == company.id,
                 UserCompanyRole.approved == True,
             )
         )
         if existing_role:
             return RedirectResponse(
-                f"/companies/{company_id}/manage?error=already_has_role", status_code=303
+                f"/companies/{company.slug}/manage?error=already_has_role", status_code=303
             )
 
-    # Replace any existing pending invite for this email
     existing_invite = await db.scalar(
         select(CompanyInvite).where(
-            CompanyInvite.company_id == company_id,
+            CompanyInvite.company_id == company.id,
             CompanyInvite.invited_email == invited_email,
             CompanyInvite.accepted == False,
         )
@@ -344,7 +351,7 @@ async def send_company_invite(
 
     token = secrets.token_urlsafe(48)
     invite = CompanyInvite(
-        company_id=company_id,
+        company_id=company.id,
         invited_by=current_user.id,
         invited_email=invited_email,
         role="job_poster",
@@ -365,46 +372,46 @@ async def send_company_invite(
     )
 
     return RedirectResponse(
-        f"/companies/{company_id}/manage?success=invite_sent", status_code=303
+        f"/companies/{company.slug}/manage?success=invite_sent", status_code=303
     )
 
 
-@router.post("/companies/{company_id}/invites/{invite_id}/revoke")
+@router.post("/companies/{company_slug}/invites/{invite_id}/revoke")
 async def revoke_invite(
-    company_id: int,
+    company_slug: str,
     invite_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
-    await _require_company_admin(company_id, current_user, db)
+    company = await _require_company_admin(company_slug, current_user, db)
 
     invite = await db.get(CompanyInvite, invite_id)
-    if invite and invite.company_id == company_id and not invite.accepted:
+    if invite and invite.company_id == company.id and not invite.accepted:
         await db.delete(invite)
         await db.commit()
 
-    return RedirectResponse(f"/companies/{company_id}/manage", status_code=303)
+    return RedirectResponse(f"/companies/{company.slug}/manage", status_code=303)
 
 
-@router.post("/companies/{company_id}/posters/{role_id}/remove")
+@router.post("/companies/{company_slug}/posters/{role_id}/remove")
 async def remove_poster(
-    company_id: int,
+    company_slug: str,
     role_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
-    await _require_company_admin(company_id, current_user, db)
+    company = await _require_company_admin(company_slug, current_user, db)
 
     role = await db.get(UserCompanyRole, role_id)
-    if role and role.company_id == company_id:
+    if role and role.company_id == company.id:
         if role.user_id == current_user.id and role.role == "company_admin":
             return RedirectResponse(
-                f"/companies/{company_id}/manage?error=cannot_remove_self", status_code=303
+                f"/companies/{company.slug}/manage?error=cannot_remove_self", status_code=303
             )
         await db.delete(role)
         await db.commit()
 
-    return RedirectResponse(f"/companies/{company_id}/manage", status_code=303)
+    return RedirectResponse(f"/companies/{company.slug}/manage", status_code=303)
 
 
 # ---------------------------------------------------------------------------
@@ -466,7 +473,7 @@ async def invite_accept_submit(
     )
     if existing:
         if existing.approved:
-            return RedirectResponse(f"/companies/{invite.company_id}/manage", status_code=303)
+            return RedirectResponse(f"/companies/{invite.company.slug}/manage", status_code=303)
         existing.role = invite.role
         existing.approved = True
         existing.approved_by = invite.invited_by
@@ -486,26 +493,26 @@ async def invite_accept_submit(
     invite.accepted_by = current_user.id
     await db.commit()
 
-    return RedirectResponse(f"/companies/{invite.company_id}/manage", status_code=303)
+    return RedirectResponse(f"/companies/{invite.company.slug}/manage", status_code=303)
 
 
 # ---------------------------------------------------------------------------
 # Employer job listings dashboard
 # ---------------------------------------------------------------------------
 
-@router.get("/companies/{company_id}/jobs", response_class=HTMLResponse)
+@router.get("/companies/{company_slug}/jobs", response_class=HTMLResponse)
 async def company_jobs_dashboard(
-    company_id: int,
+    company_slug: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
-    company = await _require_company_admin(company_id, current_user, db)
+    company = await _require_company_admin(company_slug, current_user, db)
 
     jobs = (
         await db.execute(
             select(JobListing)
-            .where(JobListing.company_id == company_id)
+            .where(JobListing.company_id == company.id)
             .options(
                 selectinload(JobListing.job_status),
                 selectinload(JobListing.job_type),
@@ -628,29 +635,28 @@ async def companies_index(
 # Edit company profile (company_admin only)
 # ---------------------------------------------------------------------------
 
-@router.get("/companies/{company_id}/edit", response_class=HTMLResponse)
+@router.get("/companies/{company_slug}/edit", response_class=HTMLResponse)
 async def company_edit_form(
-    company_id: int,
+    company_slug: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
-    await _require_company_admin(company_id, current_user, db)
+    await _require_company_admin(company_slug, current_user, db)
 
-    result = await db.execute(
+    company = (await db.execute(
         select(Company)
-        .where(Company.id == company_id)
+        .where(Company.slug == company_slug)
         .options(
             selectinload(Company.company_type_obj),
             selectinload(Company.sites).selectinload(CompanySite.city),
             selectinload(Company.socials).selectinload(CompanySocial.social_type),
         )
-    )
-    company = result.scalar_one()
+    )).scalar_one()
 
     current_industry_ids = set(
         (await db.execute(
-            select(CompanyIndustry.industry_id).where(CompanyIndustry.company_id == company_id)
+            select(CompanyIndustry.industry_id).where(CompanyIndustry.company_id == company.id)
         )).scalars().all()
     )
 
@@ -688,9 +694,10 @@ async def company_edit_form(
     )
 
 
-@router.post("/companies/{company_id}/edit")
+@router.post("/companies/{company_slug}/edit")
 async def company_edit_submit(
-    company_id: int,
+    company_slug: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
     common_name: str = Form(...),
@@ -701,10 +708,71 @@ async def company_edit_submit(
     company_size: Optional[str] = Form(None),
     company_type_id: int = Form(...),
     industry_ids: Optional[List[int]] = Form(None),
+    custom_slug: Optional[str] = Form(None),
 ):
-    company = await _require_company_admin(company_id, current_user, db)
+    await _require_company_admin(company_slug, current_user, db)
 
-    company.common_name = common_name.strip()
+    company = (await db.execute(
+        select(Company)
+        .where(Company.slug == company_slug)
+        .options(
+            selectinload(Company.company_type_obj),
+            selectinload(Company.sites).selectinload(CompanySite.city),
+            selectinload(Company.socials).selectinload(CompanySocial.social_type),
+        )
+    )).scalar_one()
+
+    common_name = common_name.strip()
+    new_slug = generate_slug(common_name)
+
+    if custom_slug and custom_slug.strip():
+        new_slug = re.sub(r"[^a-z0-9-]+", "-", custom_slug.strip().lower()).strip("-") or new_slug
+
+    if new_slug != company.slug:
+        collision = await db.scalar(
+            select(Company.id).where(Company.slug == new_slug, Company.id != company.id)
+        )
+        if collision:
+            current_industry_ids = set(
+                (await db.execute(
+                    select(CompanyIndustry.industry_id).where(CompanyIndustry.company_id == company.id)
+                )).scalars().all()
+            )
+            company_types = (await db.execute(
+                select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name)
+            )).scalars().all()
+            industries = (await db.execute(
+                select(Industry).where(Industry.is_active == True).order_by(Industry.name)
+            )).scalars().all()
+            social_types = (await db.execute(
+                select(SocialMediaType).order_by(SocialMediaType.name)
+            )).scalars().all()
+            served_cities = (await db.execute(
+                select(City).where(City.is_served == True)
+                .order_by(City.sort_order.nullslast(), City.city_name)
+            )).scalars().all()
+
+            return templates.TemplateResponse(
+                request,
+                "companies/edit.html",
+                {
+                    "title": f"Edit — {company.common_name}",
+                    "company": company,
+                    "company_types": company_types,
+                    "industries": industries,
+                    "current_industry_ids": current_industry_ids,
+                    "social_types": social_types,
+                    "served_cities": served_cities,
+                    "current_user": current_user,
+                    "slug_collision": True,
+                    "pending_name": common_name,
+                    "suggested_slug": f"{new_slug}-2",
+                },
+                status_code=422,
+            )
+
+    company.slug = new_slug
+    company.common_name = common_name
     company.legal_name = legal_name.strip() if legal_name and legal_name.strip() else None
     company.description = description.strip() if description and description.strip() else None
     company.website = sanitize_url(website) if website and website.strip() else None
@@ -712,53 +780,53 @@ async def company_edit_submit(
     company.company_size = company_size.strip() if company_size and company_size.strip() else None
     company.company_type = company_type_id
 
-    await db.execute(delete(CompanyIndustry).where(CompanyIndustry.company_id == company_id))
+    await db.execute(delete(CompanyIndustry).where(CompanyIndustry.company_id == company.id))
     for ind_id in (industry_ids or []):
-        db.add(CompanyIndustry(company_id=company_id, industry_id=ind_id))
+        db.add(CompanyIndustry(company_id=company.id, industry_id=ind_id))
 
     await db.commit()
-    return RedirectResponse(f"/companies/{company_id}/edit?success=saved", status_code=303)
+    return RedirectResponse(f"/companies/{company.slug}/edit?success=saved", status_code=303)
 
 
-@router.post("/companies/{company_id}/edit/socials/add")
+@router.post("/companies/{company_slug}/edit/socials/add")
 async def company_edit_social_add(
-    company_id: int,
+    company_slug: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
     social_type_id: int = Form(...),
     company_url: str = Form(...),
 ):
-    await _require_company_admin(company_id, current_user, db)
+    company = await _require_company_admin(company_slug, current_user, db)
     url = sanitize_url(company_url.strip())
     if url:
         db.add(CompanySocial(
-            company_id=company_id,
+            company_id=company.id,
             social_media_type_id=social_type_id,
             company_url=url,
             is_active=True,
         ))
         await db.commit()
-    return RedirectResponse(f"/companies/{company_id}/edit", status_code=303)
+    return RedirectResponse(f"/companies/{company.slug}/edit", status_code=303)
 
 
-@router.post("/companies/{company_id}/edit/socials/{social_id}/remove")
+@router.post("/companies/{company_slug}/edit/socials/{social_id}/remove")
 async def company_edit_social_remove(
-    company_id: int,
+    company_slug: str,
     social_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
-    await _require_company_admin(company_id, current_user, db)
+    company = await _require_company_admin(company_slug, current_user, db)
     social = await db.get(CompanySocial, social_id)
-    if social and social.company_id == company_id:
+    if social and social.company_id == company.id:
         await db.delete(social)
         await db.commit()
-    return RedirectResponse(f"/companies/{company_id}/edit", status_code=303)
+    return RedirectResponse(f"/companies/{company.slug}/edit", status_code=303)
 
 
-@router.post("/companies/{company_id}/edit/sites/add")
+@router.post("/companies/{company_slug}/edit/sites/add")
 async def company_edit_site_add(
-    company_id: int,
+    company_slug: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
     city_id: Optional[int] = Form(None),
@@ -767,10 +835,10 @@ async def company_edit_site_add(
     phone: Optional[str] = Form(None),
     is_headquarters: Optional[str] = Form(None),
 ):
-    await _require_company_admin(company_id, current_user, db)
+    company = await _require_company_admin(company_slug, current_user, db)
     if city_id:
         db.add(CompanySite(
-            company_id=company_id,
+            company_id=company.id,
             city_id=city_id,
             address1=address1.strip() if address1 and address1.strip() else None,
             address2=address2.strip() if address2 and address2.strip() else None,
@@ -779,45 +847,44 @@ async def company_edit_site_add(
             is_active=True,
         ))
         await db.commit()
-    return RedirectResponse(f"/companies/{company_id}/edit", status_code=303)
+    return RedirectResponse(f"/companies/{company.slug}/edit", status_code=303)
 
 
-@router.post("/companies/{company_id}/edit/sites/{site_id}/remove")
+@router.post("/companies/{company_slug}/edit/sites/{site_id}/remove")
 async def company_edit_site_remove(
-    company_id: int,
+    company_slug: str,
     site_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
-    await _require_company_admin(company_id, current_user, db)
+    company = await _require_company_admin(company_slug, current_user, db)
     site = await db.get(CompanySite, site_id)
-    if site and site.company_id == company_id:
+    if site and site.company_id == company.id:
         await db.delete(site)
         await db.commit()
-    return RedirectResponse(f"/companies/{company_id}/edit", status_code=303)
+    return RedirectResponse(f"/companies/{company.slug}/edit", status_code=303)
 
 
 # ---------------------------------------------------------------------------
 # Public company profile (keep last — parameterized route)
 # ---------------------------------------------------------------------------
 
-@router.get("/companies/{company_id}", response_class=HTMLResponse)
+@router.get("/companies/{company_slug}", response_class=HTMLResponse)
 async def company_profile(
-    company_id: int,
+    company_slug: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    result = await db.execute(
+    company = (await db.execute(
         select(Company)
-        .where(Company.id == company_id)
+        .where(Company.slug == company_slug)
         .options(
             selectinload(Company.company_type_obj),
             selectinload(Company.sites),
             selectinload(Company.socials).selectinload(CompanySocial.social_type),
         )
-    )
-    company = result.scalar_one_or_none()
+    )).scalar_one_or_none()
 
     if company is None or (not company.approved and not (current_user and current_user.is_staff)):
         raise HTTPException(status_code=404)
@@ -827,7 +894,7 @@ async def company_profile(
         await db.execute(
             select(JobListing)
             .where(
-                JobListing.company_id == company_id,
+                JobListing.company_id == company.id,
                 JobListing.approved == True,
                 JobListing.job_status_id == active_status,
             )

@@ -23,7 +23,7 @@
           <div class="job-card__title">{{ job.job_title }}</div>
           <div class="job-card__company">
             {% if job.company %}
-              <a href="/companies/{{ job.company_id }}" onclick="event.stopPropagation()">
+              <a href="/companies/{{ job.company.slug }}" onclick="event.stopPropagation()">
                 {{ job.company.common_name }}
               </a>
             {% endif %}

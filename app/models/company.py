@@ -11,6 +11,7 @@ class Company(Base):
     __tablename__ = "company"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     common_name: Mapped[str] = mapped_column(String(255), nullable=False)
     legal_name: Mapped[Optional[str]] = mapped_column(String(255))
     website: Mapped[Optional[str]] = mapped_column(String(500))

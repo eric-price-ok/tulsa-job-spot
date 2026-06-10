@@ -19,7 +19,7 @@
         hx-get="/jobs"
         hx-target="#job-results"
         hx-push-url="true"
-        hx-trigger="change from:select, submit"
+        hx-trigger="submit"
         hx-indicator="#search-spinner"
       >
         {# Keyword search #}
@@ -48,7 +48,7 @@
         {% if served_cities %}
         <div class="filter-section">
           <div class="filter-section__label">City</div>
-          <select id="city_id" name="city_id">
+          <select id="city_id" name="city_id" x-on:change="$el.closest('form').requestSubmit()">
             <option value="">All cities</option>
             {% for city in served_cities %}
             <option value="{{ city.id }}" {% if filters.city_id == city.id %}selected{% endif %}>
@@ -63,7 +63,7 @@
         {% if functions %}
         <div class="filter-section">
           <div class="filter-section__label">Function</div>
-          <select id="function_id" name="function_id">
+          <select id="function_id" name="function_id" x-on:change="$el.closest('form').requestSubmit()">
             <option value="">All functions</option>
             {% for fn in functions %}
             <option value="{{ fn.id }}" {% if filters.function_id == fn.id %}selected{% endif %}>
@@ -78,7 +78,7 @@
         {% if job_types %}
         <div class="filter-section">
           <div class="filter-section__label">Job Type</div>
-          <select id="job_type_id" name="job_type_id">
+          <select id="job_type_id" name="job_type_id" x-on:change="$el.closest('form').requestSubmit()">
             <option value="">Any type</option>
             {% for jt in job_types %}
             <option value="{{ jt.id }}" {% if filters.job_type_id == jt.id %}selected{% endif %}>
@@ -93,7 +93,7 @@
         {% if office_locations %}
         <div class="filter-section">
           <div class="filter-section__label">Work Location</div>
-          <select id="office_location_id" name="office_location_id">
+          <select id="office_location_id" name="office_location_id" x-on:change="$el.closest('form').requestSubmit()">
             <option value="">Any location</option>
             {% for ol in office_locations %}
             <option value="{{ ol.id }}" {% if filters.office_location_id == ol.id %}selected{% endif %}>
@@ -107,7 +107,7 @@
         {# Date posted filter #}
         <div class="filter-section">
           <div class="filter-section__label">Date Posted</div>
-          <select id="date_posted" name="date_posted">
+          <select id="date_posted" name="date_posted" x-on:change="$el.closest('form').requestSubmit()">
             <option value="">Any time</option>
             <option value="1d" {% if filters.date_posted == '1d' %}selected{% endif %}>Last 24 hours</option>
             <option value="7d" {% if filters.date_posted == '7d' %}selected{% endif %}>Last 7 days</option>

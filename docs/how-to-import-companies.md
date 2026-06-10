@@ -54,16 +54,40 @@ The file must be a plain CSV (comma-separated) with **column headers in the firs
 | `date_founded` | Year the company was founded. Format: `YYYY-MM-DD` (e.g. `1906-01-01`). Use January 1 if only the year is known. |
 | `date_closed` | Date the company closed. Format: `YYYY-MM-DD`. Only include for companies that are no longer operating. |
 
+### Location Columns (optional)
+
+If any location field is present, a headquarters site record is created for the company.
+
+| Column | Description |
+|--------|-------------|
+| `street` | Street address (e.g. `100 W 5th St`). |
+| `city` | City name. Matched case-insensitively against known cities; stored as a reference FK when found, otherwise left blank. |
+| `state` | State abbreviation (e.g. `OK`). Matched against the states table. |
+| `zip` | ZIP or postal code. |
+| `phone` | Main phone number. |
+
+### Social Media Columns (optional)
+
+Each present column creates a social media link on the company profile. Values must be full URLs.
+
+| Column | Platform |
+|--------|----------|
+| `Linkedin` | LinkedIn company page |
+| `GitHub` | GitHub organization |
+| `Facebook` | Facebook page |
+| `Instagram` | Instagram profile |
+| `Twitter` | Twitter / X profile |
+
 ---
 
 ## Example CSV
 
 ```csv
-common_name,legal_name,company_type,website,company_size,description,date_founded
-ONEOK,ONEOK Inc.,Public,https://www.oneok.com,1001+,Midstream natural gas operator headquartered in Tulsa.,1906-01-01
-Williams Companies,The Williams Companies Inc.,Public,https://www.williams.com,1001+,Energy infrastructure company.,1908-01-01
-QuikTrip,,Private,https://www.quiktrip.com,1001+,Convenience store and gas station chain.,1958-01-01
-Vast Bank,,Private,https://www.vast.bank,51-200,,2018-06-01
+common_name,legal_name,company_type,website,company_size,description,date_founded,street,city,state,zip,phone,Linkedin,GitHub,Facebook,Instagram,Twitter
+ONEOK,ONEOK Inc.,Private Company,https://www.oneok.com,1001+,Midstream natural gas operator headquartered in Tulsa.,1906-01-01,100 W 5th St,Tulsa,OK,74103,918-588-7000,https://linkedin.com/company/oneok,,,, 
+Williams Companies,The Williams Companies Inc.,Private Company,https://www.williams.com,1001+,Energy infrastructure company.,1908-01-01,One Williams Center,Tulsa,OK,74172,,https://linkedin.com/company/williams-companies,,,,
+QuikTrip,,Private Company,https://www.quiktrip.com,1001+,Convenience store and gas station chain.,1958-01-01,,Tulsa,OK,,,,,,,
+Vast Bank,,Private Company,https://www.vast.bank,51-200,,2018-06-01,,,,,,,,,, 
 ```
 
 ### Notes on the example

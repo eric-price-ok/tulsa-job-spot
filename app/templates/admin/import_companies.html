@@ -30,8 +30,7 @@
       <div class="panel__body">
         <p class="text-muted mb-3">
           Upload a CSV file to bulk-import companies. The file will be parsed and you'll see a
-          preview before any records are saved.
-          <a href="/docs/how-to-import-companies.md" target="_blank">View format guide</a>.
+          preview before any records are saved. See the column reference below.
         </p>
         <form method="POST" action="/admin/import-companies/preview" enctype="multipart/form-data">
           <div class="form-group" style="max-width:28rem">
@@ -68,6 +67,18 @@
             <tr><td><code>company_size</code></td><td>No</td><td>e.g. <code>1-10</code>, <code>11-50</code>, <code>51-200</code>, <code>201-500</code>, <code>501-1000</code>, <code>1001+</code></td></tr>
             <tr><td><code>date_founded</code></td><td>No</td><td>YYYY-MM-DD</td></tr>
             <tr><td><code>date_closed</code></td><td>No</td><td>YYYY-MM-DD — only for defunct companies</td></tr>
+            <tr><td colspan="3" style="background:var(--color-surface-alt,#f5f5f5);font-weight:600;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;padding:.4rem .75rem">Location (creates a headquarters site record)</td></tr>
+            <tr><td><code>street</code></td><td>No</td><td>Street address</td></tr>
+            <tr><td><code>city</code></td><td>No</td><td>City name</td></tr>
+            <tr><td><code>state</code></td><td>No</td><td>State abbreviation (e.g. <code>OK</code>)</td></tr>
+            <tr><td><code>zip</code></td><td>No</td><td>ZIP / postal code</td></tr>
+            <tr><td><code>phone</code></td><td>No</td><td>Main phone number</td></tr>
+            <tr><td colspan="3" style="background:var(--color-surface-alt,#f5f5f5);font-weight:600;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;padding:.4rem .75rem">Social Media</td></tr>
+            <tr><td><code>Linkedin</code></td><td>No</td><td>Full profile URL (https://linkedin.com/company/…)</td></tr>
+            <tr><td><code>GitHub</code></td><td>No</td><td>Full profile URL (https://github.com/…)</td></tr>
+            <tr><td><code>Facebook</code></td><td>No</td><td>Full profile URL (https://facebook.com/…)</td></tr>
+            <tr><td><code>Instagram</code></td><td>No</td><td>Full profile URL (https://instagram.com/…)</td></tr>
+            <tr><td><code>Twitter</code></td><td>No</td><td>Full profile URL (https://x.com/…)</td></tr>
           </tbody>
         </table>
       </div>

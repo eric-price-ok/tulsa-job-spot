@@ -630,6 +630,18 @@ ul { list-style: none; }
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
+.filter-bar input[type="search"] {
+  padding: .4rem .6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: .875rem;
+  background: var(--color-bg-card);
+  color: var(--color-text);
+}
+.filter-bar input[type="search"]:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
 
 /* ---------------------------------------------------------------------------
    Data table

@@ -8,140 +8,101 @@
     <p class="page-header__sub">{{ settings.SITE_TAGLINE }}</p>
   </div>
 
-  <div class="browse-layout">
+  <form id="search-form" method="GET" action="/jobs"
+    hx-get="/jobs"
+    hx-target="#job-results"
+    hx-push-url="true"
+    hx-trigger="submit"
+    hx-indicator="#search-spinner"
+    hx-include="#search-form">
+    <div class="filter-bar">
 
-    {# ---- Sidebar filters ---- #}
-    <aside class="browse-sidebar" aria-label="Search filters">
-      <form
-        id="search-form"
-        method="GET"
-        action="/jobs"
+      <input
+        type="search"
+        name="q"
+        value="{{ filters.q }}"
+        placeholder="Keyword search"
+        aria-label="Search jobs"
         hx-get="/jobs"
         hx-target="#job-results"
         hx-push-url="true"
-        hx-trigger="submit"
-        hx-indicator="#search-spinner"
+        hx-trigger="keyup changed delay:400ms"
         hx-include="#search-form"
-      >
-        {# Keyword search #}
-        <div class="search-bar">
-          <input
-            type="search"
-            id="job-search"
-            name="q"
-            value="{{ filters.q }}"
-            placeholder="Job title or keyword"
-            aria-label="Search jobs"
-            hx-get="/jobs"
-            hx-target="#job-results"
-            hx-push-url="true"
-            hx-trigger="keyup changed delay:400ms"
-            hx-include="#search-form"
-          >
-          <button type="submit" class="btn btn--primary" aria-label="Search">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M9 3a6 6 0 100 12A6 6 0 009 3zM1 9a8 8 0 1114.32 4.906l3.387 3.387a1 1 0 01-1.414 1.414l-3.387-3.387A8 8 0 011 9z" clip-rule="evenodd"/>
-            </svg>
-          </button>
-        </div>
+        hx-indicator="#search-spinner">
 
-        {# City filter #}
-        {% if served_cities %}
-        <div class="filter-section">
-          <div class="filter-section__label">City</div>
-          <select id="city_id" name="city_id"
-            hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
-            hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
-            <option value="">All cities</option>
-            {% for city in served_cities %}
-            <option value="{{ city.id }}" {% if filters.city_id == city.id %}selected{% endif %}>
-              {{ city.city_name }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
+      {% if served_cities %}
+      <select name="city_id" aria-label="Filter by city"
+        hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
+        hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
+        <option value="">All cities</option>
+        {% for city in served_cities %}
+        <option value="{{ city.id }}" {% if filters.city_id == city.id %}selected{% endif %}>{{ city.city_name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
 
-        {# Function filter #}
-        {% if functions %}
-        <div class="filter-section">
-          <div class="filter-section__label">Function</div>
-          <select id="function_id" name="function_id"
-            hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
-            hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
-            <option value="">All functions</option>
-            {% for fn in functions %}
-            <option value="{{ fn.id }}" {% if filters.function_id == fn.id %}selected{% endif %}>
-              {{ fn.name }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
+      {% if functions %}
+      <select name="function_id" aria-label="Filter by function"
+        hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
+        hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
+        <option value="">All functions</option>
+        {% for fn in functions %}
+        <option value="{{ fn.id }}" {% if filters.function_id == fn.id %}selected{% endif %}>{{ fn.name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
 
-        {# Job type filter #}
-        {% if job_types %}
-        <div class="filter-section">
-          <div class="filter-section__label">Job Type</div>
-          <select id="job_type_id" name="job_type_id"
-            hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
-            hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
-            <option value="">Any type</option>
-            {% for jt in job_types %}
-            <option value="{{ jt.id }}" {% if filters.job_type_id == jt.id %}selected{% endif %}>
-              {{ jt.name }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
+      {% if job_types %}
+      <select name="job_type_id" aria-label="Filter by job type"
+        hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
+        hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
+        <option value="">Any type</option>
+        {% for jt in job_types %}
+        <option value="{{ jt.id }}" {% if filters.job_type_id == jt.id %}selected{% endif %}>{{ jt.name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
 
-        {# Office location filter #}
-        {% if office_locations %}
-        <div class="filter-section">
-          <div class="filter-section__label">Work Location</div>
-          <select id="office_location_id" name="office_location_id"
-            hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
-            hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
-            <option value="">Any location</option>
-            {% for ol in office_locations %}
-            <option value="{{ ol.id }}" {% if filters.office_location_id == ol.id %}selected{% endif %}>
-              {{ ol.name }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
+      {% if office_locations %}
+      <select name="office_location_id" aria-label="Filter by work location"
+        hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
+        hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
+        <option value="">Any location</option>
+        {% for ol in office_locations %}
+        <option value="{{ ol.id }}" {% if filters.office_location_id == ol.id %}selected{% endif %}>{{ ol.name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
 
-        {# Date posted filter #}
-        <div class="filter-section">
-          <div class="filter-section__label">Date Posted</div>
-          <select id="date_posted" name="date_posted"
-            hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
-            hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
-            <option value="">Any time</option>
-            <option value="1d" {% if filters.date_posted == '1d' %}selected{% endif %}>Last 24 hours</option>
-            <option value="7d" {% if filters.date_posted == '7d' %}selected{% endif %}>Last 7 days</option>
-            <option value="30d" {% if filters.date_posted == '30d' %}selected{% endif %}>Last 30 days</option>
-          </select>
-        </div>
+      <select name="date_posted" aria-label="Filter by date posted"
+        hx-get="/jobs" hx-target="#job-results" hx-push-url="true"
+        hx-trigger="change" hx-include="#search-form" hx-indicator="#search-spinner">
+        <option value="">Any time</option>
+        <option value="1d" {% if filters.date_posted == '1d' %}selected{% endif %}>Last 24 hours</option>
+        <option value="7d" {% if filters.date_posted == '7d' %}selected{% endif %}>Last 7 days</option>
+        <option value="30d" {% if filters.date_posted == '30d' %}selected{% endif %}>Last 30 days</option>
+      </select>
 
-        {# Reset link (hidden if no filters active) #}
-        {% if filters.q or filters.city_id or filters.function_id or filters.job_type_id or filters.office_location_id or filters.date_posted %}
-        <a href="/jobs" class="btn btn--ghost btn--sm" style="width:100%;justify-content:center;margin-top:.5rem">
-          Clear filters
-        </a>
-        {% endif %}
-      </form>
-    </aside>
+      <span id="search-spinner" class="htmx-indicator text-muted text-sm">Searching…</span>
 
-    {# ---- Results ---- #}
-    <div>
-      <div id="job-results">
-        {% include "partials/job_list.html" %}
-      </div>
+      {% if filters.q or filters.city_id or filters.function_id or filters.job_type_id or filters.office_location_id or filters.date_posted %}
+      <a href="/jobs" class="btn btn--ghost btn--sm">Clear filters</a>
+      {% endif %}
+
     </div>
+  </form>
 
+  <div id="job-results">
+    {% include "partials/job_list.html" %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('htmx:configRequest', function (e) {
+    var p = e.detail.parameters;
+    Object.keys(p).forEach(function (k) { if (p[k] === '') delete p[k]; });
+  });
+</script>
 {% endblock %}

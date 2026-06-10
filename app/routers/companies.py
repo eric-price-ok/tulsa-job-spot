@@ -545,12 +545,14 @@ async def company_jobs_dashboard(
 @router.get("/companies", response_class=HTMLResponse)
 async def companies_index(
     request: Request,
-    city_id: Optional[int] = None,
-    industry_id: Optional[int] = None,
+    city_id: Optional[str] = None,
+    industry_id: Optional[str] = None,
     page: int = 1,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
+    city_id = int(city_id) if city_id else None
+    industry_id = int(industry_id) if industry_id else None
     stmt = (
         select(Company)
         .where(Company.approved == True, Company.defunct == False)

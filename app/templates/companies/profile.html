@@ -4,6 +4,15 @@
 {% block content %}
 <div class="company-profile">
 
+  {% if current_user and current_user.is_staff %}
+    <div class="admin-action-bar">
+      <span class="admin-action-bar__label">Admin</span>
+      <a href="/companies/{{ company.slug }}/edit" class="btn btn--sm btn--outline">Edit Profile</a>
+      <a href="/companies/{{ company.slug }}/manage" class="btn btn--sm btn--outline">Manage Team</a>
+      <a href="/companies/{{ company.slug }}/jobs" class="btn btn--sm btn--outline">All Listings</a>
+    </div>
+  {% endif %}
+
   <div class="company-header">
     <div class="company-header__info">
       <h1>{{ company.common_name }}</h1>

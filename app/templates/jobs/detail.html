@@ -4,6 +4,16 @@
 {% block content %}
 <div class="job-detail">
 
+  {% if current_user and current_user.is_staff %}
+    <div class="admin-action-bar">
+      <span class="admin-action-bar__label">Admin</span>
+      <a href="/jobs/{{ job.id }}/edit" class="btn btn--sm btn--outline">Edit Listing</a>
+      {% if job.company %}
+        <a href="/companies/{{ job.company.slug }}/jobs" class="btn btn--sm btn--outline">All {{ job.company.common_name }} Listings</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
   {# Status banner for non-active jobs #}
   {% if job.job_status and job.job_status.name == 'closed' %}
     <div class="status-banner status-banner--closed" role="alert">

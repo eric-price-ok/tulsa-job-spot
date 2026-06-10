@@ -1249,3 +1249,25 @@ ul { list-style: none; }
   gap: 1rem;
   justify-content: center;
 }
+
+
+/* Admin action bar — shown on public pages to staff users */
+.admin-action-bar {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .75rem;
+  margin-bottom: 1.25rem;
+  background: #fff8e1;
+  border: 1px solid #f9a825;
+  border-radius: var(--radius, 6px);
+  flex-wrap: wrap;
+}
+.admin-action-bar__label {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #f57f17;
+  margin-right: .25rem;
+}

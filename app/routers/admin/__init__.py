@@ -41,6 +41,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # ---------------------------------------------------------------------------
 
 _REFERENCE_REGISTRY: dict[str, tuple[type, str]] = {
+    "company-types":    (CompanyType,     "Company Types"),
     "skills":           (Skill,           "Skills"),
     "job-types":        (JobType,         "Job Types"),
     "industries":       (Industry,        "Industries"),

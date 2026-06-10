@@ -46,7 +46,7 @@
         <td>
           {% if not company.is_scraped %}
             <div class="social-icons">
-              {% for social in company.socials %}
+              {% for social in company.socials | sort(attribute='social_type.name') %}
                 {% if social.is_active and social.company_url and (social.company_url.startswith('http://') or social.company_url.startswith('https://')) %}
                   {% set slug = social.social_type.name | lower | replace(' ', '') %}
                   <a href="{{ social.company_url }}" target="_blank" rel="noopener noreferrer"

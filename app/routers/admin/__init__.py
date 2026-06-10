@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from ...database import get_db
 from ...dependencies import require_admin
-from ...models.company import Company, UserCompanyRole
+from ...models.company import Company, CompanySite, CompanySocial, UserCompanyRole
 from ...models.job import JobListing
 from ...models.reference import (
     City,
@@ -25,6 +25,7 @@ from ...models.reference import (
     JobType,
     OfficeLocation,
     Skill,
+    SocialMediaType,
     State,
 )
 from ...models.scraping import ScraperSource, ScrapingLog
@@ -40,6 +41,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # ---------------------------------------------------------------------------
 
 _REFERENCE_REGISTRY: dict[str, tuple[type, str]] = {
+    "company-types":    (CompanyType,     "Company Types"),
     "skills":           (Skill,           "Skills"),
     "job-types":        (JobType,         "Job Types"),
     "industries":       (Industry,        "Industries"),
@@ -761,6 +763,18 @@ async def import_companies_preview(
             "company_size": row.get("company_size") or None,
             "date_founded": date_founded,
             "date_closed": date_closed,
+            # Social media
+            "linkedin":  sanitize_url(row.get("linkedin")),
+            "github":    sanitize_url(row.get("github")),
+            "facebook":  sanitize_url(row.get("facebook")),
+            "instagram": sanitize_url(row.get("instagram")),
+            "twitter":   sanitize_url(row.get("twitter")),
+            # Location
+            "street":     row.get("street") or None,
+            "city_name":  row.get("city") or None,
+            "state_abbr": row.get("state") or None,
+            "zip":        row.get("zip") or None,
+            "phone":      row.get("phone") or None,
         })
         existing_names.add(common_name.lower())
 
@@ -799,6 +813,19 @@ async def import_companies_confirm(
     now = datetime.now()
     imported = 0
 
+    smt_rows = (await db.execute(select(SocialMediaType))).scalars().all()
+    smt_id_map = {s.name.lower(): s.id for s in smt_rows}
+    _SOCIAL_COLS = {
+        "linkedin":  "linkedin",
+        "github":    "github",
+        "facebook":  "facebook",
+        "instagram": "instagram",
+        "twitter":   "twitter/x",
+    }
+
+    state_cache: dict = {}
+    city_cache: dict = {}
+
     for row in rows:
         base = generate_slug(row["common_name"])
         slug = base
@@ -810,7 +837,7 @@ async def import_companies_confirm(
         date_founded = datetime.fromisoformat(row["date_founded"]) if row.get("date_founded") else None
         date_closed = datetime.fromisoformat(row["date_closed"]) if row.get("date_closed") else None
 
-        db.add(Company(
+        company = Company(
             slug=slug,
             common_name=row["common_name"],
             legal_name=row.get("legal_name"),
@@ -825,7 +852,57 @@ async def import_companies_confirm(
             approved_by=current_user.id,
             approved_at=now,
             is_scraped=False,
-        ))
+        )
+        db.add(company)
+        await db.flush()
+
+        for col, smt_key in _SOCIAL_COLS.items():
+            url = row.get(col)
+            if url:
+                smt_id = smt_id_map.get(smt_key)
+                if smt_id:
+                    db.add(CompanySocial(
+                        company_id=company.id,
+                        social_media_type_id=smt_id,
+                        company_url=url,
+                    ))
+
+        street     = row.get("street") or None
+        city_name  = row.get("city_name") or None
+        state_abbr = row.get("state_abbr") or None
+        postcode   = row.get("zip") or None
+        phone      = row.get("phone") or None
+
+        if any([street, city_name, state_abbr, postcode, phone]):
+            state_id = None
+            if state_abbr:
+                key = state_abbr.upper()
+                if key not in state_cache:
+                    state_cache[key] = await db.scalar(
+                        select(State.id).where(State.abbreviation == key)
+                    )
+                state_id = state_cache[key]
+
+            city_id = None
+            if city_name:
+                cache_key = (city_name.lower(), state_id)
+                if cache_key not in city_cache:
+                    stmt = select(City.id).where(City.city_name.ilike(city_name))
+                    if state_id:
+                        stmt = stmt.where(City.state_id == state_id)
+                    city_cache[cache_key] = await db.scalar(stmt)
+                city_id = city_cache[cache_key]
+
+            db.add(CompanySite(
+                company_id=company.id,
+                address1=street,
+                city_id=city_id,
+                state_id=state_id,
+                postcode=postcode,
+                phone=phone,
+                is_headquarters=True,
+            ))
+
         imported += 1
 
     await db.commit()

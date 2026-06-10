@@ -15,57 +15,43 @@
 </div>
 
 {% if jobs %}
-  <div class="job-list" role="list">
-    {% for job in jobs %}
-    <a href="/jobs/{{ job.id }}" class="job-card" role="listitem">
-      <div class="job-card__top">
-        <div>
-          <div class="job-card__title">{{ job.job_title }}</div>
-          <div class="job-card__company">
-            {% if job.company %}
-              <a href="/companies/{{ job.company.slug }}" onclick="event.stopPropagation()">
-                {{ job.company.common_name }}
-              </a>
-            {% endif %}
-          </div>
-        </div>
-        <div class="job-card__badges">
-          {% if job.company and job.company.is_scraped %}
-            <span class="badge badge--scraped" title="Sourced by scraper">Scraped</span>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Position</th>
+        <th>Posted</th>
+        <th>Type</th>
+        <th>City</th>
+        <th>Location</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td>
+          {% if job.company %}
+            <a href="/companies/{{ job.company.slug }}" class="table-link">{{ job.company.common_name }}</a>
           {% endif %}
-          {% if job.office_location %}
-            {% if job.office_location.name|lower == 'remote' %}
-              <span class="badge badge--remote">Remote</span>
-            {% elif job.office_location.name|lower == 'hybrid' %}
-              <span class="badge badge--hybrid">Hybrid</span>
-            {% endif %}
-          {% endif %}
+        </td>
+        <td>
+          <a href="/jobs/{{ job.id }}" class="table-link">{{ job.job_title }}</a>
           {% if job.date_posted and (now().date() - job.date_posted).days <= 3 %}
             <span class="badge badge--new">New</span>
           {% endif %}
-        </div>
-      </div>
-      <div class="job-card__meta">
-        {% if job.city %}
-          <span class="job-card__meta-item">📍 {{ job.city.city_name }}</span>
-        {% endif %}
-        {% if job.job_type %}
-          <span class="job-card__meta-item">{{ job.job_type.name }}</span>
-        {% endif %}
-        {% if job.minimum_salary %}
-          <span class="job-card__meta-item">
-            ${{ "{:,.0f}".format(job.minimum_salary) }}
-            {% if job.maximum_salary %} – ${{ "{:,.0f}".format(job.maximum_salary) }}{% endif %}
-            {% if job.pay_frequency %}/{{ job.pay_frequency }}{% endif %}
-          </span>
-        {% endif %}
-        {% if job.date_posted %}
-          <span class="job-card__meta-item">{{ job.date_posted.strftime('%b %-d') }}</span>
-        {% endif %}
-      </div>
-    </a>
-    {% endfor %}
-  </div>
+        </td>
+        <td class="text-nowrap">
+          {% if job.date_posted %}{{ job.date_posted.strftime('%b %-d') }}{% endif %}
+        </td>
+        <td>{% if job.job_type %}{{ job.job_type.name }}{% endif %}</td>
+        <td>{% if job.city %}{{ job.city.city_name }}{% endif %}</td>
+        <td>{% if job.office_location %}{{ job.office_location.name }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
   {% if total_pages > 1 %}
   <nav class="pagination" aria-label="Pagination">

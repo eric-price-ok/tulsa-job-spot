@@ -611,7 +611,7 @@ async def companies_index(
         await db.execute(
             select(Industry)
             .where(Industry.is_active == True)
-            .order_by(Industry.sort_order.nullslast(), Industry.name)
+            .order_by(Industry.name)
         )
     ).scalars().all()
 

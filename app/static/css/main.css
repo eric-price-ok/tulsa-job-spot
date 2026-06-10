@@ -685,6 +685,8 @@ ul { list-style: none; }
   align-items: center;
   opacity: .75;
   transition: opacity .15s;
+  font-size: 1.1rem;
+  color: inherit;
 }
 .social-icon-link:hover { opacity: 1; }
 

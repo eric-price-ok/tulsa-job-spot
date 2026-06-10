@@ -6,6 +6,8 @@
   <title>{% block title %}{{ title or settings.SITE_NAME }}{% endblock %} — {{ settings.SITE_NAME }}</title>
   <meta name="description" content="{{ settings.SITE_TAGLINE }}">
   <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}?v={{ css_v }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/fontawesome.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/brands.min.css">
   {% block head %}{% endblock %}
 </head>
 <body>

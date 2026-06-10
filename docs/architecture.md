@@ -70,7 +70,8 @@ All components run as Docker containers on a single VPS, orchestrated by Docker 
 | Reverse proxy | Caddy | Automatic HTTPS, simple config |
 | Static files | WhiteNoise | Serves static assets from app process |
 | Containerization | Docker + Compose | Single-command deployment, portable |
-| Auth | OAuth2 (Authlib) | Google and LinkedIn; no password storage |
+| Auth | OAuth2 (Authlib) | Five providers supported; no password storage |
+| AI extraction | Anthropic Claude API | Structured field extraction in scraper worker |
 
 ---
 
@@ -83,51 +84,42 @@ tulsajobspot/
 │   ├── config.py                # Settings via pydantic-settings
 │   ├── database.py              # SQLAlchemy engine + session
 │   ├── dependencies.py          # FastAPI dependency injection (auth, db session)
+│   ├── templates.py             # Jinja2 environment + CSS fingerprinting
+│   ├── utils.py                 # Slug generation, URL sanitization, redirect safety
 │   │
 │   ├── models/                  # SQLAlchemy ORM models (one file per domain)
 │   │   ├── user.py
 │   │   ├── company.py
 │   │   ├── job.py
 │   │   ├── application.py
-│   │   └── ...
+│   │   ├── reference.py         # All taxonomy/lookup tables
+│   │   └── scraping.py          # ScraperSource, ScrapingLog
 │   │
 │   ├── routers/                 # FastAPI routers (one file per domain)
 │   │   ├── auth.py              # OAuth login/logout/callback
-│   │   ├── jobs.py              # Browse, search, view listings
-│   │   ├── companies.py         # Company profiles
-│   │   ├── applications.py      # In-platform apply
-│   │   ├── profile.py           # User profile, saved jobs, skills
-│   │   ├── admin/               # Admin-only routes
-│   │   │   ├── companies.py     # Approval queues
-│   │   │   ├── jobs.py
-│   │   │   └── users.py
-│   │   └── moderator/           # Moderator-accessible routes
-│   │       ├── companies.py
-│   │       └── jobs.py
+│   │   ├── jobs.py              # Browse, search, view, create, edit, approve listings
+│   │   ├── companies.py         # Company profiles, create, manage, invites
+│   │   ├── admin/               # Admin-only routes (single __init__.py)
+│   │   └── moderator/           # Moderator-accessible routes (single __init__.py)
 │   │
 │   ├── templates/               # Jinja2 templates
 │   │   ├── base.html            # Base layout
 │   │   ├── partials/            # HTMX partial templates
 │   │   ├── jobs/
 │   │   ├── companies/
-│   │   ├── profile/
 │   │   ├── admin/
-│   │   └── moderator/
+│   │   ├── moderator/
+│   │   └── errors/
 │   │
 │   ├── static/                  # CSS, JS, images
-│   │   ├── css/
-│   │   ├── js/
-│   │   └── img/
 │   │
 │   ├── workers/                 # ARQ background job definitions
+│   │   ├── main.py              # WorkerSettings, job registry
 │   │   ├── email.py             # Notification emails
-│   │   ├── scraper.py           # Job board scraping
-│   │   └── matching.py          # Saved search matching
+│   │   └── scraper.py           # Job board scraping
 │   │
 │   └── scrapers/                # Per-source scraper implementations
-│       ├── base.py              # Abstract base scraper
-│       ├── indeed.py
-│       └── ...
+│       └── base.py              # Abstract base scraper
 │
 ├── migrations/                  # Alembic migration files
 ├── tests/
@@ -182,11 +174,8 @@ OAuth2 only. No passwords stored. Implemented via Authlib.
 - GitHub
 - Microsoft / Azure AD
 - Facebook
-- Apple
 
 Providers are **configured by the site admin** via environment variables. Only providers with `CLIENT_ID` and `CLIENT_SECRET` set in `.env` are enabled. A community deploying this for a tech-heavy audience might enable GitHub; one focused on enterprise might enable Microsoft. No code changes required to add or remove providers.
-
-Authlib supports all of the above natively.
 
 **Flow:**
 1. User clicks "Sign in with Google/LinkedIn"
@@ -364,9 +353,9 @@ No code changes required for a new community deployment.
 
 ## GitHub Repository
 
-- **Org/repo:** `[tbd]/tulsajobspot`
-- **Visibility:** Public from day one
-- **Branching:** `main` (production-ready), `develop` (integration), feature branches
+- **Org/repo:** `eric-price-ok/tulsa-job-spot`
+- **Visibility:** Public
+- **Branching:** `main` (production-ready), feature branches
 - **Issues:** Used for feature tracking and bug reports
 - **Discussions:** Community Q&A for people deploying their own instances
 
@@ -395,27 +384,27 @@ Scrapers are managed through a dedicated admin interface rather than config file
 | Field | Description |
 |---|---|
 | `name` | Human-readable label |
-| `source_type` | `company_board`, `aggregator`, `rss`, `api` |
-| `url` | Entry point URL |
 | `scraper_class` | Python class name to invoke |
+| `url` | Entry point URL |
 | `company_id` | FK to company (for company-specific boards) |
+| `cron_schedule` | Cron expression for run frequency |
 | `is_active` | Toggle without deleting |
-| `schedule_cron` | Cron expression for run frequency |
+| `selenium_required` | Flag for sources needing a headless browser |
 | `last_run_at` | Timestamp of last execution |
-| `config_json` | JSONB for scraper-specific parameters |
+| `last_status` | Status string from last run |
+| `config` | JSON for scraper-specific parameters |
 
 ### Admin Interface Capabilities
 - View all sources with last run status and job counts
 - Enable / disable individual sources
-- Adjust scrape frequency per source
 - Trigger a manual scrape run
-- View scraping log history per source
-- Add new sources (URL + scraper type; AI assists with field mapping)
+- View paginated scraping log history
+- Add new sources
 
 ### Scraper Architecture
 Each scraper inherits from a `BaseScraper` abstract class that handles deduplication, AI extraction, logging, and error handling. Individual scrapers only implement `fetch_listings()`. AI extraction via Claude API handles unstructured job descriptions, replacing manual field parsing and reducing per-scraper maintenance burden.
 
-The site admin's existing Python scraper scripts targeting company job boards are the initial source list and will be refactored to inherit from `BaseScraper`.
+Individual scraper implementations (`app/scrapers/`) are not yet written; only `base.py` exists.
 
 ---
 
@@ -433,6 +422,5 @@ The site admin's existing Python scraper scripts targeting company job boards ar
 
 ## Open Questions / TBD
 
-- Scraper sources inventory — existing scripts to be catalogued and migrated
-- GitHub repo org — personal account or dedicated org?
-- Apple OAuth — requires paid Apple Developer account; low priority
+- Scraper implementations — `BaseScraper` is in place; individual scrapers for specific job boards are not yet written
+- Apple OAuth — requires paid Apple Developer account; low priority; not currently implemented

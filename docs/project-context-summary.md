@@ -111,8 +111,7 @@ Key tables:
 - `user_skills` — user profile skills from taxonomy
 - `user_certifications` — with verified flag
 - `scrapinglog` — scraper run history
-- `scraper_sources` — admin-managed scraper config (to be added to schema)
-- `federation_peers` — instance sync config (to be added to schema, P3 feature)
+- `scraper_sources` — admin-managed scraper config
 
 ---
 
@@ -125,26 +124,36 @@ tulsajobspot/
 │   ├── config.py
 │   ├── database.py
 │   ├── dependencies.py
+│   ├── templates.py
+│   ├── utils.py
 │   ├── models/
+│   │   ├── user.py
+│   │   ├── company.py
+│   │   ├── job.py
+│   │   ├── application.py
+│   │   ├── reference.py
+│   │   └── scraping.py
 │   ├── routers/
 │   │   ├── auth.py
 │   │   ├── jobs.py
 │   │   ├── companies.py
-│   │   ├── applications.py
-│   │   ├── profile.py
-│   │   ├── admin/
-│   │   └── moderator/
+│   │   ├── admin/__init__.py
+│   │   └── moderator/__init__.py
 │   ├── templates/
 │   │   ├── base.html
 │   │   ├── partials/
 │   │   ├── jobs/
 │   │   ├── companies/
-│   │   ├── profile/
 │   │   ├── admin/
-│   │   └── moderator/
+│   │   ├── moderator/
+│   │   └── errors/
 │   ├── static/
 │   ├── workers/
+│   │   ├── main.py
+│   │   ├── email.py
+│   │   └── scraper.py
 │   └── scrapers/
+│       └── base.py
 ├── migrations/
 ├── tests/
 ├── docker/
@@ -160,36 +169,40 @@ tulsajobspot/
 
 ---
 
-## Phase 1 Build Plan (what we're starting now)
+## Artifacts in This Project
 
-1. Project scaffolding — directory structure, pyproject.toml, requirements
-2. Docker Compose setup — app, worker, db, redis, caddy services
-3. Caddy config — reverse proxy, auto HTTPS, www redirect
-4. FastAPI app factory — main.py, config.py, database.py
-5. SQLAlchemy models — all tables from schema
-6. Alembic — migration setup and initial migration
-7. Seed data script — reference tables (countries, states, cities, job types, functions, etc.)
-8. OAuth auth — sign in/out with at least Google, session management
-9. Base templates — base.html, nav, static assets (CSS/JS)
-10. Anonymous browse — job listing index, search/filter, job detail, company profile
-11. setup.sh — bootstrap script tying it all together
+- `migrations/` — Alembic migration files (source of truth for schema)
+- `architecture.md` — system architecture document
+- `feature-spec.md` — full feature specification with priorities
+- `deployment-runbook.md` — VPS setup and deployment instructions
+- `deferred.md` — items deliberately skipped during a phase; check before starting new work
+- `security-review.md` — security analysis
+- `running-tests.md` — test execution guide
+- `how-to-import-companies.md` — CSV bulk import process
 
 ---
 
-## Artifacts in This Project
+## Current Status
 
-- `create-tulsajobspot-db.sql` — full database schema
-- `architecture.md` — system architecture document
-- `feature-spec.md` — full feature specification with priorities
-- `deployment-runbook.md` — VPS setup and deployment instructions (needs revision pass after first real deployment)
+Phase 1 is complete. The application is built and deployed. Key capabilities in place:
+
+- OAuth authentication (Google, LinkedIn, GitHub, Microsoft, Facebook)
+- Anonymous job browsing with full-text search and faceted filters
+- Company profiles
+- Employer workflow: company creation, job posting, team invites
+- Moderator approval queues (companies, roles, job listings)
+- Admin dashboard: reference data management, user/moderator management, scraper source management
+- Bulk CSV company import (3-step: upload → preview → confirm)
+- ARQ background job framework (scraping, email, expiration)
+- Scraper infrastructure (`BaseScraper` + Claude API extraction)
 
 ---
 
 ## Open Items / Known TODOs
 
-- `scraper_sources` table not yet added to schema (needed before scraper work)
-- `federation_peers` and `federation_log` tables not yet added to schema (P3)
-- Google OAuth setup instructions in runbook are outdated — need to update after email is configured for the site
-- Deployment runbook needs revision pass: sudo prefixes on apt commands, SSH key section needs console-session note, hosts file edit is optional
-- Scraper design document to be written in a separate chat
-- Scraper migration (100 existing Python scripts) to be handled in separate chat
+Tracked in `docs/deferred.md`. Current deferred items:
+
+- **Manage Company Profile** — `company_admin` edit form for company details (name, description, website, social links). The `/companies/{slug}/manage` page currently handles team and invites only. Spec 4.4 (P2).
+- **Moderator activity log** — last 20 approvals/rejections on the moderator dashboard. Queue counts are present; the chronological log is not. Spec 6.4 (P1).
+
+P3 (federation) tables (`federation_peers`, `federation_log`) are not yet modeled — deferred until federation is actively scoped.

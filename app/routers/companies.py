@@ -891,7 +891,10 @@ async def company_profile(
         )
     )).scalar_one_or_none()
 
-    if company is None or (not company.approved and not (current_user and current_user.is_staff)):
+    if company is None:
+        raise HTTPException(status_code=404)
+    is_staff = current_user and current_user.is_staff
+    if not is_staff and (not company.approved or company.defunct):
         raise HTTPException(status_code=404)
 
     active_status = await db.scalar(select(JobStatus.id).where(JobStatus.name == "active"))
@@ -922,3 +925,39 @@ async def company_profile(
             "current_user": current_user,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Admin: disable / re-enable a company
+# ---------------------------------------------------------------------------
+
+@router.post("/companies/{company_slug}/disable", response_class=HTMLResponse)
+async def company_disable(
+    company_slug: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    if not current_user.is_staff:
+        raise HTTPException(status_code=403)
+    company = await db.scalar(select(Company).where(Company.slug == company_slug))
+    if company is None:
+        raise HTTPException(status_code=404)
+    company.defunct = True
+    await db.commit()
+    return RedirectResponse(f"/companies/{company_slug}", status_code=303)
+
+
+@router.post("/companies/{company_slug}/enable", response_class=HTMLResponse)
+async def company_enable(
+    company_slug: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    if not current_user.is_staff:
+        raise HTTPException(status_code=403)
+    company = await db.scalar(select(Company).where(Company.slug == company_slug))
+    if company is None:
+        raise HTTPException(status_code=404)
+    company.defunct = False
+    await db.commit()
+    return RedirectResponse(f"/companies/{company_slug}", status_code=303)

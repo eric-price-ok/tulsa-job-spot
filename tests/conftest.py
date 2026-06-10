@@ -1,4 +1,7 @@
+import base64
+import json
 import os
+import secrets
 
 # Must precede any app import — app/database.py creates the SQLAlchemy engine
 # at module load time from settings.DATABASE_URL.
@@ -9,9 +12,12 @@ os.environ.setdefault(
 
 import pytest
 from httpx import AsyncClient, ASGITransport
+from itsdangerous import TimestampSigner
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 import app.models  # ensures all ORM relationships are registered
+from app.models.company import Company
+from app.models.reference import CompanyType
 from app.models.user import User
 from app.database import get_db
 
@@ -64,3 +70,52 @@ async def client(db):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def make_session_cookie():
+    """Return a callable that builds a signed Starlette session cookie."""
+    from app.config import settings
+    def _make(data: dict) -> str:
+        payload = base64.b64encode(json.dumps(data).encode()).decode()
+        return TimestampSigner(settings.SECRET_KEY).sign(payload).decode()
+    return _make
+
+
+@pytest.fixture
+async def staff_user(db):
+    """An admin user (is_staff == True)."""
+    u = User(
+        email=f"staff_{secrets.token_hex(4)}@example.com",
+        full_name="Staff User",
+        oauth_provider="test",
+        oauth_subject=f"staff-{secrets.token_hex(8)}",
+        is_admin=True,
+    )
+    db.add(u)
+    await db.flush()
+    return u
+
+
+@pytest.fixture
+async def company_type(db):
+    """A minimal active CompanyType for use in company fixtures."""
+    ct = CompanyType(name=f"_test_{secrets.token_hex(6)}", is_active=True)
+    db.add(ct)
+    await db.flush()
+    return ct
+
+
+@pytest.fixture
+async def company(db, company_type):
+    """An approved, active company."""
+    c = Company(
+        slug=f"test-co-{secrets.token_hex(6)}",
+        common_name="Test Company",
+        company_type=company_type.id,
+        approved=True,
+        defunct=False,
+    )
+    db.add(c)
+    await db.flush()
+    return c

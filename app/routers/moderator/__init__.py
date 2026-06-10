@@ -345,14 +345,15 @@ async def approve_job(
     job.approved_at = datetime.now()
     await db.commit()
 
-    await enqueue_email(
-        "job_approved",
-        {
-            "to_email": job.poster.email,
-            "job_title": job.job_title,
-            "job_id": job.id,
-        },
-    )
+    if job.poster:
+        await enqueue_email(
+            "job_approved",
+            {
+                "to_email": job.poster.email,
+                "job_title": job.job_title,
+                "job_id": job.id,
+            },
+        )
 
     return RedirectResponse("/moderator/jobs?success=approved", status_code=303)
 
@@ -375,14 +376,15 @@ async def reject_job(
     if job is None:
         return RedirectResponse("/moderator/jobs", status_code=303)
 
-    await enqueue_email(
-        "job_rejected",
-        {
-            "to_email": job.poster.email,
-            "job_title": job.job_title,
-            "reason": reason or "No reason provided.",
-        },
-    )
+    if job.poster:
+        await enqueue_email(
+            "job_rejected",
+            {
+                "to_email": job.poster.email,
+                "job_title": job.job_title,
+                "reason": reason or "No reason provided.",
+            },
+        )
 
     from ...models.reference import JobStatus as _JS2
     closed_status_id = await db.scalar(

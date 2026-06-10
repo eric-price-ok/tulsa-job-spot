@@ -293,6 +293,26 @@ Visit `https://yourdomain.com` in a browser. You should see the job board home p
 
 ---
 
+## Production vs Development Compose Files
+
+The repository ships two Docker Compose files:
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | Base configuration. Used for local development — includes `--reload`, bind-mounted source code, and exposed DB/Redis ports for local access. |
+| `docker-compose.prod.yml` | Production overrides. Replaces `--reload` uvicorn with gunicorn (4 workers), removes the bind mount (container runs from the baked image), closes the DB/Redis ports, and adds `restart: unless-stopped` to all services. |
+
+On the production server, `.env` contains `COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml`. Docker Compose reads this variable and automatically layers both files for every `docker compose` command — no `-f` flags needed. The initial `setup.sh` bootstrap adds this entry automatically for new installs.
+
+**Existing server:** If your `.env` does not yet have `COMPOSE_FILE`, add this line and then rebuild:
+
+```bash
+echo "COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml" >> .env
+docker compose up -d --build
+```
+
+---
+
 ## Environment Variable Reference
 
 All variables live in `.env` in the project root. Never commit this file to git — it is in `.gitignore`.
@@ -376,12 +396,17 @@ docker compose down && docker compose up -d
 ```bash
 cd /home/deploy/tulsajobspot
 git pull
-docker compose build
-docker compose up -d
+docker compose up -d --build
 docker compose exec app alembic upgrade head
 ```
 
-Alembic will apply any new migrations. If a migration fails, it will roll back automatically.
+`--build` is required because `docker-compose.prod.yml` removes the bind mount — the container runs from the baked image, so a new image must be built to pick up code changes. Alembic will apply any new migrations; if a migration fails it rolls back automatically.
+
+If you have not yet added `COMPOSE_FILE` to your `.env` (see below), use the explicit form instead:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
 
 ### Run a migration manually
 

@@ -12,6 +12,11 @@ async def test_jobs_page_loads(client: AsyncClient):
     assert response.status_code == 200
 
 
+async def test_companies_page_loads(client: AsyncClient):
+    response = await client.get("/companies")
+    assert response.status_code == 200
+
+
 async def test_admin_requires_auth(client: AsyncClient):
     response = await client.get("/admin", follow_redirects=False)
     assert response.status_code == 303

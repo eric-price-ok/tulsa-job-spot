@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from ...database import get_db
 from ...dependencies import require_admin
-from ...models.company import Company, CompanySite, CompanySocial, UserCompanyRole
+from ...models.company import Company, CompanyIndustry, CompanySite, CompanySocial, UserCompanyRole
 from ...models.job import JobListing
 from ...models.reference import (
     City,
@@ -672,6 +672,11 @@ async def import_companies_preview(
         await db.execute(select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name))
     ).scalars().all()
 
+    industries = (
+        await db.execute(select(Industry).where(Industry.is_active == True).order_by(Industry.name))
+    ).scalars().all()
+    industry_map = {i.name.lower(): i.id for i in industries}
+
     content = await file.read()
     try:
         text = content.decode("utf-8-sig")
@@ -753,6 +758,8 @@ async def import_companies_preview(
                 })
                 continue
 
+        industry_id = industry_map.get(row.get("industry", "").strip().lower()) or None
+
         rows_to_import.append({
             "common_name": common_name,
             "legal_name": row.get("legal_name") or None,
@@ -763,6 +770,7 @@ async def import_companies_preview(
             "company_size": row.get("company_size") or None,
             "date_founded": date_founded,
             "date_closed": date_closed,
+            "industry_id": industry_id,
             # Social media
             "linkedin":  sanitize_url(row.get("linkedin")),
             "github":    sanitize_url(row.get("github")),
@@ -855,6 +863,12 @@ async def import_companies_confirm(
         )
         db.add(company)
         await db.flush()
+
+        if row.get("industry_id"):
+            db.add(CompanyIndustry(
+                company_id=company.id,
+                industry_id=row["industry_id"],
+            ))
 
         for col, smt_key in _SOCIAL_COLS.items():
             url = row.get(col)

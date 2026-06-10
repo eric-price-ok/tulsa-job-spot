@@ -8,19 +8,16 @@
     <p class="page-header__sub">Local employers on {{ settings.SITE_NAME }}</p>
   </div>
 
-  <form
-    id="search-form"
-    method="GET"
-    action="/companies"
-    hx-get="/companies"
-    hx-target="#company-results"
-    hx-push-url="true"
-    hx-trigger="submit"
-    hx-indicator="#search-spinner"
-  >
+  <form id="search-form" method="GET" action="/companies">
     <div class="filter-bar">
       {% if city_options %}
-      <select id="city_id" name="city_id" aria-label="Filter by city" x-on:change="$el.closest('form').requestSubmit()">
+      <select id="city_id" name="city_id" aria-label="Filter by city"
+        hx-get="/companies"
+        hx-target="#company-results"
+        hx-push-url="true"
+        hx-trigger="change"
+        hx-include="#search-form"
+        hx-indicator="#search-spinner">
         <option value="">All cities</option>
         {% for city in city_options %}
         <option value="{{ city.id }}" {% if filters.city_id == city.id %}selected{% endif %}>
@@ -31,7 +28,13 @@
       {% endif %}
 
       {% if industries %}
-      <select id="industry_id" name="industry_id" aria-label="Filter by industry" x-on:change="$el.closest('form').requestSubmit()">
+      <select id="industry_id" name="industry_id" aria-label="Filter by industry"
+        hx-get="/companies"
+        hx-target="#company-results"
+        hx-push-url="true"
+        hx-trigger="change"
+        hx-include="#search-form"
+        hx-indicator="#search-spinner">
         <option value="">All industries</option>
         {% for ind in industries %}
         <option value="{{ ind.id }}" {% if filters.industry_id == ind.id %}selected{% endif %}>

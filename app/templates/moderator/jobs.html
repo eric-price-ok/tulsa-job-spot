@@ -15,7 +15,7 @@
             <div class="queue-item queue-item--stacked">
               <div class="queue-item__main">
                 <h3 style="margin-bottom:.25rem">
-                  <a href="/jobs/{{ job.id }}" class="link" target="_blank">{{ job.job_title }}</a>
+                  <a href="/jobs/{{ job_url_slug(job.id, job.job_title) }}" class="link" target="_blank">{{ job.job_title }}</a>
                 </h3>
                 <div class="queue-item__meta">
                   <span>{{ job.company.common_name }}</span>

@@ -5,6 +5,7 @@ from datetime import datetime
 from fastapi.templating import Jinja2Templates
 
 from .config import settings
+from .utils import job_url_slug
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -22,6 +23,7 @@ def _css_fingerprint() -> str:
         return "0"
 
 templates.env.globals["css_v"] = _css_fingerprint()
+templates.env.globals["job_url_slug"] = job_url_slug
 
 
 def _format_phone(value: str | None) -> str:

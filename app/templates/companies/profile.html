@@ -86,7 +86,7 @@
   {% if jobs %}
     <div class="job-list" role="list">
       {% for job in jobs %}
-        <a href="/jobs/{{ job.id }}" class="job-card" role="listitem">
+        <a href="/jobs/{{ job_url_slug(job.id, job.job_title) }}" class="job-card" role="listitem">
           <div class="job-card__title">{{ job.job_title }}</div>
           <div class="job-card__meta">
             {% if job.city %}

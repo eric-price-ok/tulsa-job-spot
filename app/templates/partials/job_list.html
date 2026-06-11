@@ -36,7 +36,7 @@
           {% endif %}
         </td>
         <td>
-          <a href="/jobs/{{ job.id }}" class="table-link">{{ job.job_title }}</a>
+          <a href="/jobs/{{ job_url_slug(job.id, job.job_title) }}" class="table-link">{{ job.job_title }}</a>
           {% if job.date_posted and (now().date() - job.date_posted).days <= 3 %}
             <span class="badge badge--new">New</span>
           {% endif %}

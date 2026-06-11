@@ -7,6 +7,15 @@ _LEGAL_SUFFIX_RE = re.compile(
 )
 
 
+def job_url_slug(job_id: int, job_title: str) -> str:
+    """Return the URL slug for a job listing: some-title-{id}"""
+    text = job_title.lower().strip()
+    text = re.sub(r"[''']", "", text)
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    text = text.strip("-") or "job"
+    return f"{text}-{job_id}"
+
+
 def generate_slug(name: str) -> str:
     text = _LEGAL_SUFFIX_RE.sub("", name).strip()
     text = text.lower()

@@ -34,7 +34,7 @@
               <div class="queue-item__main">
                 <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
                   <h3 style="margin:0">
-                    <a href="/jobs/{{ job.id }}" class="link">{{ job.job_title }}</a>
+                    <a href="/jobs/{{ job_url_slug(job.id, job.job_title) }}" class="link">{{ job.job_title }}</a>
                   </h3>
                   <span class="badge {{ status_class | trim }}">{{ status_label | trim }}</span>
                 </div>
@@ -57,7 +57,7 @@
                     <button type="submit" class="btn btn--ghost btn--sm">Close</button>
                   </form>
                 {% endif %}
-                <a href="/jobs/{{ job.id }}" class="btn btn--ghost btn--sm" target="_blank">View</a>
+                <a href="/jobs/{{ job_url_slug(job.id, job.job_title) }}" class="btn btn--ghost btn--sm" target="_blank">View</a>
               </div>
             </div>
           </div>

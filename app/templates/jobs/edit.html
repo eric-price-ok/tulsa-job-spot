@@ -17,7 +17,7 @@
     <div class="form-actions">
       <button type="submit" class="btn btn--primary btn--lg">Save Changes</button>
       <a href="/companies/{{ company.slug }}/jobs" class="btn btn--ghost">Cancel</a>
-      <a href="/jobs/{{ job.id }}" class="btn btn--ghost" target="_blank">View Listing</a>
+      <a href="/jobs/{{ job_url_slug(job.id, job.job_title) }}" class="btn btn--ghost" target="_blank">View Listing</a>
     </div>
 
     {% if job.approved %}

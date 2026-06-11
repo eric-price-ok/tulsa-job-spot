@@ -10,8 +10,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+import re as _re
+
 from ..config import settings
-from ..utils import sanitize_url
+from ..utils import job_url_slug, sanitize_url
 from ..database import get_db
 from ..dependencies import get_current_user, require_user
 from ..models.company import Company, UserCompanyRole
@@ -603,13 +605,29 @@ async def jobs_index(
 # Job detail (anonymous)
 # ---------------------------------------------------------------------------
 
-@router.get("/jobs/{job_id}", response_class=HTMLResponse)
+@router.get("/jobs/{job_slug}", response_class=HTMLResponse)
 async def job_detail(
-    job_id: int,
+    job_slug: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
+    # Slug format: some-title-{id}  e.g. senior-engineer-56
+    m = _re.match(r"^.*-(\d+)$", job_slug)
+    if m:
+        job_id = int(m.group(1))
+    elif job_slug.isdigit():
+        # Legacy numeric URL — look up and redirect to canonical slug
+        job_id = int(job_slug)
+        legacy_job = await db.get(JobListing, job_id)
+        if legacy_job is None:
+            raise HTTPException(status_code=404)
+        return RedirectResponse(
+            f"/jobs/{job_url_slug(legacy_job.id, legacy_job.job_title)}", status_code=301
+        )
+    else:
+        raise HTTPException(status_code=404)
+
     job = (
         await db.execute(
             select(JobListing)
@@ -632,6 +650,11 @@ async def job_detail(
 
     if job is None or (not job.approved and not (current_user and current_user.is_staff)):
         raise HTTPException(status_code=404)
+
+    # Canonical redirect if the title portion of the slug is stale
+    canonical = job_url_slug(job.id, job.job_title)
+    if job_slug != canonical:
+        return RedirectResponse(f"/jobs/{canonical}", status_code=301)
 
     return templates.TemplateResponse(
         request,

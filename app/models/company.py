@@ -87,6 +87,7 @@ class CompanySite(Base):
     city_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("cities.id", ondelete="SET NULL"))
     postcode: Mapped[Optional[str]] = mapped_column(String(10))
     phone: Mapped[Optional[str]] = mapped_column(String(50))
+    site_name: Mapped[Optional[str]] = mapped_column(String(255))
     site_web: Mapped[Optional[str]] = mapped_column(String(500))
     site_job_board: Mapped[Optional[str]] = mapped_column(String(500))
     shortname: Mapped[Optional[str]] = mapped_column(String)

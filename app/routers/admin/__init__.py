@@ -17,6 +17,7 @@ from ...models.company import Company, CompanyIndustry, CompanySite, CompanySoci
 from ...models.job import JobListing
 from ...models.reference import (
     City,
+    CompanySiteType,
     CompanyType,
     Experience,
     Function,
@@ -42,6 +43,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 _REFERENCE_REGISTRY: dict[str, tuple[type, str]] = {
     "company-types":    (CompanyType,     "Company Types"),
+    "job-site-types":   (CompanySiteType, "Job Site Types"),
     "skills":           (Skill,           "Skills"),
     "job-types":        (JobType,         "Job Types"),
     "industries":       (Industry,        "Industries"),

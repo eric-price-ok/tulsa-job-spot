@@ -100,6 +100,7 @@ class CompanySite(Base):
     company: Mapped["Company"] = relationship("Company", back_populates="sites")
     city: Mapped[Optional["City"]] = relationship("City")  # type: ignore[name-defined]
     state: Mapped[Optional["State"]] = relationship("State")  # type: ignore[name-defined]
+    site_type_obj: Mapped[Optional["CompanySiteType"]] = relationship("CompanySiteType", foreign_keys=[site_type])  # type: ignore[name-defined]
 
 
 class CompanySocial(Base):

@@ -75,6 +75,128 @@
     </div>
   {% endif %}
 
+  {# Locations #}
+  {% set active_sites = company.sites | selectattr('is_active', 'equalto', true) | list %}
+  {% set inactive_sites = company.sites | selectattr('is_active', 'equalto', false) | list %}
+  {% if active_sites or is_company_admin %}
+  <div x-data="{ showInactive: false, showAddForm: false }" style="margin-bottom:2rem">
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem">
+      <h2 style="font-size:1.1rem;font-weight:600;margin:0">Locations</h2>
+      {% if inactive_sites and is_company_admin %}
+      <label style="display:flex;align-items:center;gap:.35rem;font-size:.875rem;color:var(--color-text-muted);cursor:pointer">
+        <input type="checkbox" x-model="showInactive"> Show inactive
+      </label>
+      {% endif %}
+      {% if is_company_admin %}
+      <button type="button" class="btn btn--outline btn--sm" @click="showAddForm = !showAddForm"
+              x-text="showAddForm ? 'Cancel' : 'Add Site'"></button>
+      {% endif %}
+    </div>
+
+    {% if company.sites %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>City</th>
+            <th>Address</th>
+            <th>Phone</th>
+            <th>HQ</th>
+            {% if is_company_admin %}<th></th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for site in company.sites | sort(attribute='is_headquarters', reverse=true) %}
+          <tr {% if not site.is_active %}x-show="showInactive"{% endif %}>
+            <td>
+              {{ site.site_name or '—' }}
+              {% if not site.is_active %}<span class="badge" style="margin-left:.35rem">Inactive</span>{% endif %}
+            </td>
+            <td>{{ site.site_type_obj.name if site.site_type_obj else '' }}</td>
+            <td>{{ site.city.city_name if site.city else '' }}</td>
+            <td class="text-nowrap">
+              {% if site.address1 %}{{ site.address1 }}{% endif %}
+              {% if site.address2 %}<br>{{ site.address2 }}{% endif %}
+            </td>
+            <td class="text-nowrap">{{ site.phone | format_phone }}</td>
+            <td>{% if site.is_headquarters %}✓{% endif %}</td>
+            {% if is_company_admin %}
+            <td>
+              <form method="POST" action="/companies/{{ company.slug }}/sites/{{ site.id }}/toggle">
+                <button type="submit" class="btn btn--ghost btn--sm">
+                  {{ 'Deactivate' if site.is_active else 'Reactivate' }}
+                </button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if is_company_admin %}
+    <div x-show="showAddForm" x-cloak style="margin-top:1rem">
+      <form method="POST" action="/companies/{{ company.slug }}/sites/add" class="panel">
+        <div class="panel__header"><div class="panel__title">Add Location</div></div>
+        <div class="panel__body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem">
+            <div>
+              <label class="form-label" for="site_name">Site Name</label>
+              <input id="site_name" name="site_name" type="text" class="form-input" placeholder="e.g. Downtown Office">
+            </div>
+            {% if site_types %}
+            <div>
+              <label class="form-label" for="site_type_id">Site Type</label>
+              <select id="site_type_id" name="site_type_id" class="form-select">
+                <option value="">— select —</option>
+                {% for st in site_types %}
+                <option value="{{ st.id }}">{{ st.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            {% if served_cities %}
+            <div>
+              <label class="form-label" for="site_city_id">City</label>
+              <select id="site_city_id" name="city_id" class="form-select">
+                <option value="">— select —</option>
+                {% for city in served_cities %}
+                <option value="{{ city.id }}">{{ city.city_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            <div>
+              <label class="form-label" for="site_address1">Address</label>
+              <input id="site_address1" name="address1" type="text" class="form-input" placeholder="Street address">
+            </div>
+            <div>
+              <label class="form-label" for="site_address2">Address 2</label>
+              <input id="site_address2" name="address2" type="text" class="form-input" placeholder="Suite, floor, etc.">
+            </div>
+            <div>
+              <label class="form-label" for="site_phone">Phone</label>
+              <input id="site_phone" name="phone" type="tel" class="form-input" placeholder="(918) 555-0100">
+            </div>
+            <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.5rem">
+              <input id="site_hq" name="is_headquarters" type="checkbox" value="true">
+              <label for="site_hq" class="form-label" style="margin:0">Headquarters</label>
+            </div>
+          </div>
+          <div style="margin-top:1rem">
+            <button type="submit" class="btn btn--primary btn--sm">Save Location</button>
+          </div>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {# Active job listings #}
   <h2 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem">
     Open Positions

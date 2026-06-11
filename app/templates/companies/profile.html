@@ -79,7 +79,7 @@
   {% set active_sites = company.sites | selectattr('is_active', 'equalto', true) | list %}
   {% set inactive_sites = company.sites | selectattr('is_active', 'equalto', false) | list %}
   {% if active_sites or is_company_admin %}
-  <div x-data="{ showInactive: false, showAddForm: false }" style="margin-bottom:2rem">
+  <div x-data="{ showInactive: false, showAddForm: false, editingSite: null }" style="margin-bottom:2rem">
     <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem">
       <h2 style="font-size:1.1rem;font-weight:600;margin:0">Locations</h2>
       {% if inactive_sites and is_company_admin %}
@@ -109,6 +109,7 @@
         </thead>
         <tbody>
           {% for site in company.sites | sort(attribute='is_headquarters', reverse=true) %}
+          {# Data row #}
           <tr {% if not site.is_active %}x-show="showInactive"{% endif %}>
             <td>
               {{ site.site_name or '—' }}
@@ -123,8 +124,12 @@
             <td class="text-nowrap">{{ site.phone | format_phone }}</td>
             <td>{% if site.is_headquarters %}✓{% endif %}</td>
             {% if is_company_admin %}
-            <td>
-              <form method="POST" action="/companies/{{ company.slug }}/sites/{{ site.id }}/toggle">
+            <td style="white-space:nowrap">
+              <button type="button" class="btn btn--outline btn--sm"
+                      @click="editingSite = (editingSite === {{ site.id }} ? null : {{ site.id }})">
+                Edit
+              </button>
+              <form method="POST" action="/companies/{{ company.slug }}/sites/{{ site.id }}/toggle" style="display:inline">
                 <button type="submit" class="btn btn--ghost btn--sm">
                   {{ 'Deactivate' if site.is_active else 'Reactivate' }}
                 </button>
@@ -132,6 +137,70 @@
             </td>
             {% endif %}
           </tr>
+          {# Inline edit form row #}
+          {% if is_company_admin %}
+          <tr x-show="editingSite === {{ site.id }}" x-cloak
+              {% if not site.is_active %}style="display:none"{% endif %}>
+            <td colspan="7" style="padding:1rem;background:var(--color-surface)">
+              <form method="POST" action="/companies/{{ company.slug }}/sites/{{ site.id }}/edit">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.75rem">
+                  <div>
+                    <label class="form-label">Site Name</label>
+                    <input name="site_name" type="text" class="form-input"
+                           value="{{ site.site_name or '' }}">
+                  </div>
+                  {% if site_types %}
+                  <div>
+                    <label class="form-label">Site Type</label>
+                    <select name="site_type_id" class="form-select">
+                      <option value="">— none —</option>
+                      {% for st in site_types %}
+                      <option value="{{ st.id }}" {% if site.site_type == st.id %}selected{% endif %}>{{ st.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  {% endif %}
+                  {% if served_cities %}
+                  <div>
+                    <label class="form-label">City</label>
+                    <select name="city_id" class="form-select">
+                      <option value="">— none —</option>
+                      {% for city in served_cities %}
+                      <option value="{{ city.id }}" {% if site.city_id == city.id %}selected{% endif %}>{{ city.city_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  {% endif %}
+                  <div>
+                    <label class="form-label">Address</label>
+                    <input name="address1" type="text" class="form-input"
+                           value="{{ site.address1 or '' }}">
+                  </div>
+                  <div>
+                    <label class="form-label">Address 2</label>
+                    <input name="address2" type="text" class="form-input"
+                           value="{{ site.address2 or '' }}">
+                  </div>
+                  <div>
+                    <label class="form-label">Phone</label>
+                    <input name="phone" type="tel" class="form-input"
+                           value="{{ site.phone or '' }}">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:.5rem;padding-top:1.5rem">
+                    <input name="is_headquarters" type="checkbox" value="true"
+                           id="hq_{{ site.id }}" {% if site.is_headquarters %}checked{% endif %}>
+                    <label for="hq_{{ site.id }}" class="form-label" style="margin:0">Headquarters</label>
+                  </div>
+                </div>
+                <div style="margin-top:.75rem;display:flex;gap:.5rem">
+                  <button type="submit" class="btn btn--primary btn--sm">Save</button>
+                  <button type="button" class="btn btn--ghost btn--sm"
+                          @click="editingSite = null">Cancel</button>
+                </div>
+              </form>
+            </td>
+          </tr>
+          {% endif %}
           {% endfor %}
         </tbody>
       </table>

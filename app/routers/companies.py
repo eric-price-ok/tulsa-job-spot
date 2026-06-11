@@ -985,6 +985,37 @@ async def company_site_add(
     return RedirectResponse(f"/companies/{company_slug}", status_code=303)
 
 
+@router.post("/companies/{company_slug}/sites/{site_id}/edit")
+async def company_site_edit(
+    company_slug: str,
+    site_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+    site_name: Optional[str] = Form(None),
+    site_type_id: Optional[str] = Form(None),
+    city_id: Optional[str] = Form(None),
+    address1: Optional[str] = Form(None),
+    address2: Optional[str] = Form(None),
+    phone: Optional[str] = Form(None),
+    is_headquarters: Optional[str] = Form(None),
+):
+    company = await _require_company_admin(company_slug, current_user, db)
+    site = await db.get(CompanySite, site_id)
+    if site is None or site.company_id != company.id:
+        raise HTTPException(status_code=404)
+
+    site.site_name = site_name.strip() if site_name and site_name.strip() else None
+    site.site_type = int(site_type_id) if site_type_id and site_type_id.strip() else None
+    site.city_id = int(city_id) if city_id and city_id.strip() else None
+    site.address1 = address1.strip() if address1 and address1.strip() else None
+    site.address2 = address2.strip() if address2 and address2.strip() else None
+    site.phone = phone.strip() if phone and phone.strip() else None
+    site.is_headquarters = is_headquarters == "true"
+
+    await db.commit()
+    return RedirectResponse(f"/companies/{company_slug}", status_code=303)
+
+
 @router.post("/companies/{company_slug}/sites/{site_id}/toggle")
 async def company_site_toggle(
     company_slug: str,

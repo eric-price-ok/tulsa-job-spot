@@ -16,7 +16,7 @@ from ..dependencies import get_current_user, require_user
 from ..utils import generate_slug, sanitize_url
 from ..models.company import Company, CompanyIndustry, CompanyInvite, CompanySite, CompanySocial, UserCompanyRole
 from ..models.job import JobListing
-from ..models.reference import City, CompanyType, Industry, JobStatus, SocialMediaType
+from ..models.reference import City, CompanySiteType, CompanyType, Industry, JobStatus, SocialMediaType
 from ..models.user import User
 from ..templates import templates
 from ..workers.email import enqueue_email
@@ -886,7 +886,8 @@ async def company_profile(
         .where(Company.slug == company_slug)
         .options(
             selectinload(Company.company_type_obj),
-            selectinload(Company.sites),
+            selectinload(Company.sites).selectinload(CompanySite.city),
+            selectinload(Company.sites).selectinload(CompanySite.site_type_obj),
             selectinload(Company.socials).selectinload(CompanySocial.social_type),
         )
     )).scalar_one_or_none()
@@ -896,6 +897,31 @@ async def company_profile(
     is_staff = current_user and current_user.is_staff
     if not is_staff and (not company.approved or company.defunct):
         raise HTTPException(status_code=404)
+
+    is_company_admin = False
+    site_types = []
+    served_cities = []
+    if current_user:
+        if current_user.is_staff:
+            is_company_admin = True
+        else:
+            admin_role = await db.scalar(
+                select(UserCompanyRole).where(
+                    UserCompanyRole.user_id == current_user.id,
+                    UserCompanyRole.company_id == company.id,
+                    UserCompanyRole.role == "company_admin",
+                    UserCompanyRole.approved == True,
+                )
+            )
+            is_company_admin = admin_role is not None
+
+    if is_company_admin:
+        site_types = (await db.execute(
+            select(CompanySiteType).where(CompanySiteType.is_active == True).order_by(CompanySiteType.name)
+        )).scalars().all()
+        served_cities = (await db.execute(
+            select(City).where(City.is_served == True).order_by(City.sort_order.nullslast(), City.city_name)
+        )).scalars().all()
 
     active_status = await db.scalar(select(JobStatus.id).where(JobStatus.name == "active"))
     jobs = (
@@ -922,9 +948,56 @@ async def company_profile(
             "title": company.common_name,
             "company": company,
             "jobs": jobs,
+            "is_company_admin": is_company_admin,
+            "site_types": site_types,
+            "served_cities": served_cities,
             "current_user": current_user,
         },
     )
+
+
+@router.post("/companies/{company_slug}/sites/add")
+async def company_site_add(
+    company_slug: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+    site_name: Optional[str] = Form(None),
+    site_type_id: Optional[int] = Form(None),
+    city_id: Optional[int] = Form(None),
+    address1: Optional[str] = Form(None),
+    address2: Optional[str] = Form(None),
+    phone: Optional[str] = Form(None),
+    is_headquarters: Optional[str] = Form(None),
+):
+    company = await _require_company_admin(company_slug, current_user, db)
+    db.add(CompanySite(
+        company_id=company.id,
+        site_name=site_name.strip() if site_name and site_name.strip() else None,
+        site_type=site_type_id or None,
+        city_id=city_id or None,
+        address1=address1.strip() if address1 and address1.strip() else None,
+        address2=address2.strip() if address2 and address2.strip() else None,
+        phone=phone.strip() if phone and phone.strip() else None,
+        is_headquarters=is_headquarters == "true",
+        is_active=True,
+    ))
+    await db.commit()
+    return RedirectResponse(f"/companies/{company_slug}", status_code=303)
+
+
+@router.post("/companies/{company_slug}/sites/{site_id}/toggle")
+async def company_site_toggle(
+    company_slug: str,
+    site_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    company = await _require_company_admin(company_slug, current_user, db)
+    site = await db.get(CompanySite, site_id)
+    if site and site.company_id == company.id:
+        site.is_active = not site.is_active
+        await db.commit()
+    return RedirectResponse(f"/companies/{company_slug}", status_code=303)
 
 
 # ---------------------------------------------------------------------------

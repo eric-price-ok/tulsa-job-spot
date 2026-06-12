@@ -14,9 +14,9 @@ from ..config import settings
 from ..database import get_db
 from ..dependencies import get_current_user, require_user
 from ..utils import generate_slug, sanitize_url
-from ..models.company import Company, CompanyIndustry, CompanyInvite, CompanySite, CompanySocial, UserCompanyRole
+from ..models.company import Company, CompanyFunction, CompanyIndustry, CompanyInvite, CompanySite, CompanySocial, UserCompanyRole
 from ..models.job import JobListing
-from ..models.reference import City, CompanySiteType, CompanyType, Industry, JobStatus, SocialMediaType
+from ..models.reference import City, CompanySiteType, CompanyType, Function, Industry, JobStatus, SocialMediaType
 from ..models.user import User
 from ..templates import templates, is_recruiters_enabled, is_job_boards_enabled
 from ..workers.email import enqueue_email
@@ -737,12 +737,22 @@ async def company_edit_form(
         )).scalars().all()
     )
 
+    current_function_ids = set(
+        (await db.execute(
+            select(CompanyFunction.function_id).where(CompanyFunction.company_id == company.id)
+        )).scalars().all()
+    )
+
     company_types = (await db.execute(
         select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name)
     )).scalars().all()
 
     industries = (await db.execute(
         select(Industry).where(Industry.is_active == True).order_by(Industry.name)
+    )).scalars().all()
+
+    functions = (await db.execute(
+        select(Function).where(Function.is_active == True).order_by(Function.name)
     )).scalars().all()
 
     social_types = (await db.execute(
@@ -768,6 +778,8 @@ async def company_edit_form(
             "company_types": company_types,
             "industries": industries,
             "current_industry_ids": current_industry_ids,
+            "functions": functions,
+            "current_function_ids": current_function_ids,
             "social_types": social_types,
             "served_cities": served_cities,
             "site_types": site_types,
@@ -790,6 +802,7 @@ async def company_edit_submit(
     company_size: Optional[str] = Form(None),
     company_type_id: int = Form(...),
     industry_ids: Optional[List[int]] = Form(None),
+    function_ids: Optional[List[int]] = Form(None),
     custom_slug: Optional[str] = Form(None),
 ):
     await _require_company_admin(company_slug, current_user, db)
@@ -820,11 +833,19 @@ async def company_edit_submit(
                     select(CompanyIndustry.industry_id).where(CompanyIndustry.company_id == company.id)
                 )).scalars().all()
             )
+            current_function_ids = set(
+                (await db.execute(
+                    select(CompanyFunction.function_id).where(CompanyFunction.company_id == company.id)
+                )).scalars().all()
+            )
             company_types = (await db.execute(
                 select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name)
             )).scalars().all()
             industries = (await db.execute(
                 select(Industry).where(Industry.is_active == True).order_by(Industry.name)
+            )).scalars().all()
+            functions = (await db.execute(
+                select(Function).where(Function.is_active == True).order_by(Function.name)
             )).scalars().all()
             social_types = (await db.execute(
                 select(SocialMediaType).order_by(SocialMediaType.name)
@@ -843,6 +864,8 @@ async def company_edit_submit(
                     "company_types": company_types,
                     "industries": industries,
                     "current_industry_ids": current_industry_ids,
+                    "functions": functions,
+                    "current_function_ids": current_function_ids,
                     "social_types": social_types,
                     "served_cities": served_cities,
                     "current_user": current_user,
@@ -865,6 +888,10 @@ async def company_edit_submit(
     await db.execute(delete(CompanyIndustry).where(CompanyIndustry.company_id == company.id))
     for ind_id in (industry_ids or []):
         db.add(CompanyIndustry(company_id=company.id, industry_id=ind_id))
+
+    await db.execute(delete(CompanyFunction).where(CompanyFunction.company_id == company.id))
+    for fn_id in (function_ids or []):
+        db.add(CompanyFunction(company_id=company.id, function_id=fn_id))
 
     await db.commit()
     return RedirectResponse(f"/companies/{new_slug}/edit?success=saved", status_code=303)
@@ -1004,6 +1031,13 @@ async def company_profile(
             select(City).where(City.is_served == True).order_by(City.sort_order.nullslast(), City.city_name)
         )).scalars().all()
 
+    company_functions = (await db.execute(
+        select(Function)
+        .join(CompanyFunction, CompanyFunction.function_id == Function.id)
+        .where(CompanyFunction.company_id == company.id, Function.is_active == True)
+        .order_by(Function.name)
+    )).scalars().all()
+
     active_status = await db.scalar(select(JobStatus.id).where(JobStatus.name == "active"))
     jobs = (
         await db.execute(
@@ -1029,6 +1063,7 @@ async def company_profile(
             "title": company.common_name,
             "company": company,
             "jobs": jobs,
+            "company_functions": company_functions,
             "is_company_admin": is_company_admin,
             "site_types": site_types,
             "served_cities": served_cities,

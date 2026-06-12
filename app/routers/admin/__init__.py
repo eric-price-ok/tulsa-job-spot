@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from ...database import get_db
 from ...dependencies import require_admin
-from ...models.company import Company, CompanyIndustry, CompanySite, CompanySocial, UserCompanyRole
+from ...models.company import Company, CompanyFunction, CompanyIndustry, CompanySite, CompanySocial, UserCompanyRole
 from ...models.job import JobListing
 from ...models.reference import (
     City,
@@ -990,6 +990,9 @@ async def admin_company_create_form(
     industries = (await db.execute(
         select(Industry).where(Industry.is_active == True).order_by(Industry.sort_order, Industry.name)
     )).scalars().all()
+    functions = (await db.execute(
+        select(Function).where(Function.is_active == True).order_by(Function.name)
+    )).scalars().all()
     return templates.TemplateResponse(
         request,
         "admin/companies_create.html",
@@ -997,6 +1000,7 @@ async def admin_company_create_form(
             "title": "Create Company",
             "company_types": company_types,
             "industries": industries,
+            "functions": functions,
             "current_user": current_user,
         },
     )
@@ -1014,6 +1018,7 @@ async def admin_company_create_submit(
     jobboard: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     industry_ids: Optional[List[int]] = Form(None),
+    function_ids: Optional[List[int]] = Form(None),
 ):
     common_name = common_name.strip()
     base_slug = generate_slug(common_name)
@@ -1040,6 +1045,10 @@ async def admin_company_create_submit(
     if industry_ids:
         for ind_id in industry_ids:
             db.add(CompanyIndustry(company_id=company.id, industry_id=ind_id))
+
+    if function_ids:
+        for fn_id in function_ids:
+            db.add(CompanyFunction(company_id=company.id, function_id=fn_id))
 
     await db.commit()
     return RedirectResponse(f"/companies/{slug}", status_code=303)

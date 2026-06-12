@@ -321,6 +321,9 @@ async def seed(session: AsyncSession):
         {"name": "GitHub",     "base_url": "https://github.com/"},
         {"name": "Instagram",  "base_url": "https://instagram.com/"},
         {"name": "YouTube",    "base_url": "https://youtube.com/"},
+        {"name": "Spotify",    "base_url": "https://open.spotify.com/"},
+        {"name": "TikTok",     "base_url": "https://tiktok.com/@"},
+        {"name": "Pinterest",  "base_url": "https://pinterest.com/"},
         {"name": "Website",    "base_url": "https://"},
     ])
 

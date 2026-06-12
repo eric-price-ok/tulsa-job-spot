@@ -39,12 +39,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 async def lifespan(app: FastAPI):
     from .database import AsyncSessionLocal
     from .models.settings import SiteSettings
-    from .templates import set_recruiters_enabled
+    from .templates import set_recruiters_enabled, set_job_boards_enabled
     from sqlalchemy import select as _select
     async with AsyncSessionLocal() as db:
         row = await db.scalar(_select(SiteSettings))
         if row:
             set_recruiters_enabled(row.recruiters_page_enabled)
+            set_job_boards_enabled(row.job_boards_section_enabled)
     yield
 
 

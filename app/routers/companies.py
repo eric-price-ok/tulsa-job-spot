@@ -18,7 +18,7 @@ from ..models.company import Company, CompanyIndustry, CompanyInvite, CompanySit
 from ..models.job import JobListing
 from ..models.reference import City, CompanySiteType, CompanyType, Industry, JobStatus, SocialMediaType
 from ..models.user import User
-from ..templates import templates, is_recruiters_enabled
+from ..templates import templates, is_recruiters_enabled, is_job_boards_enabled
 from ..workers.email import enqueue_email
 
 router = APIRouter(tags=["companies"])
@@ -650,49 +650,59 @@ async def recruiters_index(
     if not is_recruiters_enabled():
         raise HTTPException(status_code=404)
 
+    _opts = [
+        selectinload(Company.sites).selectinload(CompanySite.city),
+        selectinload(Company.socials).selectinload(CompanySocial.social_type),
+    ]
+    _base = select(Company).where(Company.approved == True, Company.defunct == False)
+
+    def _industry_filter(stmt, industry_id):
+        if industry_id:
+            return stmt.where(
+                select(CompanyIndustry.id)
+                .where(
+                    CompanyIndustry.company_id == Company.id,
+                    CompanyIndustry.industry_id == industry_id,
+                )
+                .correlate(Company)
+                .exists()
+            )
+        return stmt.where(False)
+
+    # Recruiters
     recruiting_industry_id = await db.scalar(
         select(Industry.id).where(Industry.name == "Recruiting")
     )
-
-    stmt = (
-        select(Company)
-        .where(Company.approved == True, Company.defunct == False)
-        .options(
-            selectinload(Company.sites).selectinload(CompanySite.city),
-            selectinload(Company.socials).selectinload(CompanySocial.social_type),
-        )
-    )
-
-    if recruiting_industry_id:
-        stmt = stmt.where(
-            select(CompanyIndustry.id)
-            .where(
-                CompanyIndustry.company_id == Company.id,
-                CompanyIndustry.industry_id == recruiting_industry_id,
-            )
-            .correlate(Company)
-            .exists()
-        )
-    else:
-        stmt = stmt.where(False)
-
-    count_stmt = select(func.count()).select_from(stmt.subquery())
-    total = await db.scalar(count_stmt) or 0
+    rec_stmt = _industry_filter(_base.options(*_opts), recruiting_industry_id)
+    total = await db.scalar(select(func.count()).select_from(rec_stmt.subquery())) or 0
     total_pages = max(1, math.ceil(total / ITEMS_PER_PAGE))
     page = max(1, min(page, total_pages))
+    recruiters = (await db.execute(
+        rec_stmt.order_by(Company.common_name).offset((page - 1) * ITEMS_PER_PAGE).limit(ITEMS_PER_PAGE)
+    )).scalars().all()
 
-    stmt = stmt.order_by(Company.common_name).offset((page - 1) * ITEMS_PER_PAGE).limit(ITEMS_PER_PAGE)
-    companies = (await db.execute(stmt)).scalars().all()
+    # Job boards (only fetched if section is enabled)
+    job_board_companies = []
+    if is_job_boards_enabled():
+        jb_industry_id = await db.scalar(
+            select(Industry.id).where(Industry.name == "Job Board")
+        )
+        jb_stmt = _industry_filter(_base.options(*_opts), jb_industry_id)
+        job_board_companies = (await db.execute(
+            jb_stmt.order_by(Company.common_name)
+        )).scalars().all()
 
     return templates.TemplateResponse(
         request,
         "recruiters/index.html",
         {
             "title": "Recruiters",
-            "companies": companies,
+            "recruiters": recruiters,
             "total": total,
             "page": page,
             "total_pages": total_pages,
+            "job_board_companies": job_board_companies,
+            "job_boards_enabled": is_job_boards_enabled(),
             "current_user": current_user,
         },
     )

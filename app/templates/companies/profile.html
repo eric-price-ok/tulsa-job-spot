@@ -65,6 +65,18 @@
     <div class="company-desc">{{ company.description }}</div>
   {% endif %}
 
+  {# Functions #}
+  {% if company_functions %}
+    <div style="margin-bottom:1.5rem">
+      <div class="job-detail__section-title">Functions</div>
+      <div class="flex gap-2 mt-1" style="flex-wrap:wrap">
+        {% for fn in company_functions %}
+          <span class="badge">{{ fn.name }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
   {# Social links — only for non-scraped companies #}
   {% if company.socials and not company.is_scraped %}
     <div style="margin-bottom:1.5rem">

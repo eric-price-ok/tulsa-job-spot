@@ -74,6 +74,20 @@
       </div>
       {% endif %}
 
+      {% if functions %}
+      <div class="form-section">
+        <h2 class="form-section__title">Functions</h2>
+        <div class="checkbox-grid">
+          {% for fn in functions %}
+          <label class="filter-checkbox">
+            <input type="checkbox" name="function_ids" value="{{ fn.id }}">
+            {{ fn.name }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">Create Company</button>
         <a href="/admin" class="btn btn--ghost">Cancel</a>

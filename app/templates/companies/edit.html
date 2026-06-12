@@ -97,6 +97,22 @@
       </div>
       {% endif %}
 
+      {# ── Functions ───────────────────────────────────────────────────── #}
+      {% if functions %}
+      <div class="form-section">
+        <h2 class="form-section__title">Functions</h2>
+        <div class="checkbox-grid">
+          {% for fn in functions %}
+          <label class="filter-checkbox">
+            <input type="checkbox" id="function_{{ fn.id }}" name="function_ids" value="{{ fn.id }}"
+                   {% if fn.id in current_function_ids %}checked{% endif %}>
+            {{ fn.name }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">Save Changes</button>
         <a href="/companies/{{ company.slug }}/manage" class="btn btn--ghost">Cancel</a>

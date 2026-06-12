@@ -46,6 +46,7 @@ class UserSkill(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     user: Mapped["User"] = relationship("User")
+    skill: Mapped["Skill"] = relationship("Skill")
 
 
 class UserCertification(Base):

@@ -7,9 +7,9 @@
     <h1 class="page-header__title">My Profile</h1>
   </div>
 
+  {# ── Identity card ─────────────────────────────────────────────────────── #}
   <div class="form-card" style="max-width:100%">
 
-    {# Avatar + identity — read-only #}
     <div class="form-section" style="display:flex;align-items:center;gap:1.25rem;padding-bottom:1.5rem;border-bottom:1px solid var(--color-border)">
       {% if current_user.avatar_url %}
         <img src="{{ current_user.avatar_url }}" alt=""
@@ -22,11 +22,10 @@
       <div>
         <div class="text-sm text-muted">Signed in with {{ current_user.oauth_provider | title }}</div>
         <div>{{ current_user.email }}</div>
-        <div class="text-sm text-muted" style="margin-top:0.25rem">Avatar is pulled from your sign-in provider and cannot be changed here.</div>
+        <div class="text-sm text-muted" style="margin-top:.25rem">Avatar is pulled from your sign-in provider and cannot be changed here.</div>
       </div>
     </div>
 
-    {# Editable fields #}
     <form method="POST" action="/profile">
       <div class="form-section">
         <div class="form-group">
@@ -51,5 +50,160 @@
       </div>
     </form>
   </div>
+
+  {# ── Skills ────────────────────────────────────────────────────────────── #}
+  <div class="panel" style="margin-top:2rem">
+    <div class="panel__header">
+      <h2 class="panel__title">Skills</h2>
+      <p class="panel__sub">Add skills from the site taxonomy. Star up to 3 to feature them prominently.</p>
+    </div>
+    <div class="panel__body">
+
+      {# Featured skills ─────────────────────────────────────────────────── #}
+      {% set featured = user_skills | selectattr("is_featured") | list %}
+      {% if featured %}
+        <div style="margin-bottom:1.5rem">
+          <div class="text-sm text-muted" style="margin-bottom:.5rem;font-weight:600">Featured</div>
+          <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+            {% for us in featured %}
+              <span class="chip" style="background:var(--color-primary-light);color:var(--color-primary);border-color:var(--color-primary)">
+                ★ {{ us.skill.name }}
+                {% if us.proficiency_level and us.proficiency_level != 'unknown' %}
+                  <span style="opacity:.7;margin-left:.25rem">· {{ us.proficiency_level | title }}</span>
+                {% endif %}
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {# All skills list ──────────────────────────────────────────────────── #}
+      {% if user_skills %}
+        <div class="queue-list" style="margin-bottom:1.5rem">
+          {% for us in user_skills %}
+            <div class="queue-item">
+              <div class="queue-item__main">
+                <strong>{{ us.skill.name }}</strong>
+                <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.2rem">
+                  {% if us.proficiency_level and us.proficiency_level != 'unknown' %}
+                    <span class="text-sm text-muted">{{ us.proficiency_level | title }}</span>
+                  {% endif %}
+                  {% if us.years_experience is not none %}
+                    <span class="text-sm text-muted">{{ us.years_experience }} yr{{ 's' if us.years_experience != 1 }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="queue-item__actions" style="gap:.375rem">
+                <form method="POST" action="/profile/skills/{{ us.id }}/feature" style="margin:0">
+                  <button type="submit"
+                          class="btn btn--ghost btn--sm"
+                          title="{{ 'Unfeature' if us.is_featured else 'Feature this skill' }}"
+                          style="font-size:1rem;padding:.25rem .5rem;{% if us.is_featured %}color:var(--color-primary){% else %}color:var(--color-text-muted){% endif %}">
+                    {{ '★' if us.is_featured else '☆' }}
+                  </button>
+                </form>
+                <form method="POST" action="/profile/skills/{{ us.id }}/remove" style="margin:0"
+                      onsubmit="return confirm('Remove {{ us.skill.name }} from your profile?')">
+                  <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted text-sm" style="margin-bottom:1.5rem">No skills added yet.</p>
+      {% endif %}
+
+      {# Add skill form ───────────────────────────────────────────────────── #}
+      {% if all_skills %}
+        <script id="profile-skill-data" type="application/json">
+          [{% for s in all_skills %}{"id":{{ s.id }},"name":{{ s.name | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]
+        </script>
+
+        <div x-data="profileSkillPicker()" style="border-top:1px solid var(--color-border);padding-top:1.25rem">
+          <h3 class="form-section__title">Add a Skill</h3>
+
+          {# Step 1: search #}
+          <template x-if="!pending">
+            <div class="skill-picker">
+              <div class="skill-tags-row" style="padding:.375rem .625rem">
+                <input type="text" x-model="query" @input="filter()" @keydown.escape="suggestions = []"
+                       @keydown.enter.prevent="suggestions.length && select(suggestions[0])"
+                       class="skill-input" placeholder="Type to search skills…"
+                       autocomplete="off">
+              </div>
+              <div x-show="suggestions.length > 0" class="skill-dropdown" x-cloak>
+                <template x-for="s in suggestions" :key="s.id">
+                  <button type="button" @click="select(s)" x-text="s.name"
+                          class="skill-dropdown-item"></button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          {# Step 2: fill in details and submit #}
+          <template x-if="pending">
+            <form method="POST" action="/profile/skills/add">
+              <input type="hidden" name="skill_id" :value="pending.id">
+              <div style="display:flex;align-items:flex-end;gap:.75rem;flex-wrap:wrap">
+                <div class="form-group" style="margin-bottom:0">
+                  <label class="form-label">Skill</label>
+                  <span class="chip" style="display:inline-flex">
+                    <span x-text="pending.name"></span>
+                    <button type="button" @click="clear()" class="chip__remove" aria-label="Change">×</button>
+                  </span>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;min-width:140px">
+                  <label class="form-label" for="add_proficiency">Proficiency</label>
+                  <select class="form-select" id="add_proficiency" name="proficiency_level">
+                    {% for lvl in proficiency_levels %}
+                      <option value="{{ lvl }}" {% if lvl == 'unknown' %}selected{% endif %}>
+                        {{ lvl | title }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;width:90px">
+                  <label class="form-label" for="add_years">Years</label>
+                  <input class="form-input" type="number" id="add_years" name="years_experience"
+                         min="0" max="50" placeholder="—">
+                </div>
+
+                <div style="padding-bottom:.1rem">
+                  <button type="submit" class="btn btn--primary">Add Skill</button>
+                </div>
+              </div>
+            </form>
+          </template>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
 </div>
+
+<script>
+function profileSkillPicker() {
+  const all = JSON.parse(document.getElementById('profile-skill-data').textContent);
+  const taken = new Set({{ user_skills | map(attribute='skill_id') | list | tojson }});
+  return {
+    query: '',
+    pending: null,
+    suggestions: [],
+    filter() {
+      const q = this.query.trim().toLowerCase();
+      if (!q) { this.suggestions = []; return; }
+      this.suggestions = all
+        .filter(s => !taken.has(s.id))
+        .filter(s => s.name.toLowerCase().includes(q))
+        .slice(0, 10);
+    },
+    select(skill) { this.pending = skill; this.query = ''; this.suggestions = []; },
+    clear() { this.pending = null; },
+  };
+}
+</script>
 {% endblock %}

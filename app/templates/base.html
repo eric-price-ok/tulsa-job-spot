@@ -64,6 +64,8 @@
         {% elif s == 'job_submitted' %}Your job listing has been submitted and is pending approval. You'll receive an email when it goes live.
         {% elif s == 'job_saved' %}Your changes have been saved.
         {% elif s == 'profile_saved' %}Profile updated.
+        {% elif s == 'skill_added' %}Skill added to your profile.
+        {% elif s == 'skill_removed' %}Skill removed.
         {% elif s == 'approved' %}Approved.
         {% elif s == 'rejected' %}Rejected.
         {% elif s == 'promoted' %}User promoted to moderator.
@@ -84,6 +86,9 @@
         {% elif err == 'cannot_remove_self' %}You cannot remove your own role.
         {% elif err == 'cannot_deactivate_self' %}You cannot deactivate your own account.
         {% elif err == 'cannot_demote_admin' %}Admin accounts cannot be demoted from this page.
+        {% elif err == 'invalid_skill' %}Invalid skill selection.
+        {% elif err == 'skill_already_added' %}That skill is already on your profile.
+        {% elif err == 'featured_limit' %}You can only feature up to 3 skills. Unfeature one first.
         {% else %}Something went wrong. Please try again.
         {% endif %}
       </div>

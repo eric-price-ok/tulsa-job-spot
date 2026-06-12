@@ -32,7 +32,7 @@ from ...models.reference import (
 from ...models.scraping import ScraperSource, ScrapingLog
 from ...models.settings import SiteSettings
 from ...models.user import User
-from ...templates import templates, set_recruiters_enabled
+from ...templates import templates, set_recruiters_enabled, set_job_boards_enabled
 from ...utils import generate_slug, sanitize_url
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -967,6 +967,8 @@ async def site_settings_save(
     form = await request.form()
     site_settings = await _get_or_create_site_settings(db)
     site_settings.recruiters_page_enabled = "recruiters_page_enabled" in form
+    site_settings.job_boards_section_enabled = "job_boards_section_enabled" in form
     await db.commit()
     set_recruiters_enabled(site_settings.recruiters_page_enabled)
+    set_job_boards_enabled(site_settings.job_boards_section_enabled)
     return RedirectResponse("/admin/settings?success=saved", status_code=303)

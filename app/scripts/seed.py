@@ -208,6 +208,7 @@ async def seed(session: AsyncSession):
         {"name": "MSP"},
         {"name": "Oil and Gas"},
         {"name": "Printing"},
+        {"name": "Job Board"},
         {"name": "Recruiting"},
         {"name": "Religion"},
         {"name": "Service"},

@@ -26,6 +26,7 @@ templates.env.globals["css_v"] = _css_fingerprint()
 templates.env.globals["job_url_slug"] = job_url_slug
 
 _recruiters_enabled: bool = False
+_job_boards_enabled: bool = False
 
 
 def set_recruiters_enabled(val: bool) -> None:
@@ -35,6 +36,15 @@ def set_recruiters_enabled(val: bool) -> None:
 
 def is_recruiters_enabled() -> bool:
     return _recruiters_enabled
+
+
+def set_job_boards_enabled(val: bool) -> None:
+    global _job_boards_enabled
+    _job_boards_enabled = val
+
+
+def is_job_boards_enabled() -> bool:
+    return _job_boards_enabled
 
 
 templates.env.globals["recruiters_page_enabled"] = is_recruiters_enabled

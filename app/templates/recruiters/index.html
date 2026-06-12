@@ -8,6 +8,9 @@
     <p class="page-header__sub">Recruiting firms and staffing agencies on {{ settings.SITE_NAME }}</p>
   </div>
 
+  {# ── Recruiters table ─────────────────────────────────────────────────── #}
+  <h2 style="font-size:1.1rem;font-weight:600;margin-bottom:.75rem">Recruiters</h2>
+
   <div class="results-header" aria-live="polite" aria-atomic="true">
     <div class="results-count">
       {% if total == 0 %}
@@ -20,8 +23,8 @@
     </div>
   </div>
 
-  {% if companies %}
-  <div class="table-wrap">
+  {% if recruiters %}
+  <div class="table-wrap" style="margin-bottom:1.5rem">
     <table class="data-table">
       <thead>
         <tr>
@@ -33,12 +36,11 @@
         </tr>
       </thead>
       <tbody>
-        {% for company in companies %}
+        {% for company in recruiters %}
         {% set hq = (company.sites | selectattr('is_headquarters', 'equalto', true) | list | first) or (company.sites | first) %}
+        {% set _fa = {'linkedin':'fa-linkedin','github':'fa-github','facebook':'fa-facebook','instagram':'fa-instagram','twitter/x':'fa-x-twitter','youtube':'fa-youtube','spotify':'fa-spotify','tiktok':'fa-tiktok','pinterest':'fa-pinterest'} %}
         <tr>
-          <td>
-            <a href="/companies/{{ company.slug }}" class="table-link">{{ company.common_name }}</a>
-          </td>
+          <td><a href="/companies/{{ company.slug }}" class="table-link">{{ company.common_name }}</a></td>
           <td class="text-nowrap">{{ (hq.phone if hq and hq.phone else '') | format_phone }}</td>
           <td>
             {% if company.website and (company.website.startswith('http://') or company.website.startswith('https://')) %}
@@ -51,17 +53,6 @@
             {% endif %}
           </td>
           <td>
-            {% set _fa = {
-              'linkedin':  'fa-linkedin',
-              'github':    'fa-github',
-              'facebook':  'fa-facebook',
-              'instagram': 'fa-instagram',
-              'twitter/x': 'fa-x-twitter',
-              'youtube':   'fa-youtube',
-              'spotify':   'fa-spotify',
-              'tiktok':    'fa-tiktok',
-              'pinterest': 'fa-pinterest'
-            } %}
             <div class="social-icons">
               {% for social in company.socials | sort(attribute='social_type.name') %}
                 {% if social.is_active and social.company_url and (social.company_url.startswith('http://') or social.company_url.startswith('https://')) %}
@@ -84,15 +75,13 @@
   </div>
 
   {% if total_pages > 1 %}
-  <nav class="pagination" aria-label="Pagination">
+  <nav class="pagination" aria-label="Pagination" style="margin-bottom:2rem">
     {% if page > 1 %}
       <a href="/recruiters?page={{ page - 1 }}" class="pagination__btn">&larr; Previous</a>
     {% else %}
       <span class="pagination__btn pagination__btn--disabled">&larr; Previous</span>
     {% endif %}
-
     <span class="text-muted text-sm">Page {{ page }} of {{ total_pages }}</span>
-
     {% if page < total_pages %}
       <a href="/recruiters?page={{ page + 1 }}" class="pagination__btn">Next &rarr;</a>
     {% else %}
@@ -102,10 +91,78 @@
   {% endif %}
 
   {% else %}
-  <div class="empty-state">
+  <div class="empty-state" style="margin-bottom:2rem">
     <div class="empty-state__title">No recruiters found</div>
     <div class="empty-state__text">No recruiting firms have been approved yet. Check back soon.</div>
   </div>
+  {% endif %}
+
+  {# ── Job Boards table (optional section) ─────────────────────────────── #}
+  {% if job_boards_enabled %}
+  <hr style="margin:2rem 0;border:none;border-top:1px solid var(--color-border)">
+
+  <h2 style="font-size:1.1rem;font-weight:600;margin-bottom:.5rem">Job Boards</h2>
+  <p class="text-muted text-sm" style="margin-bottom:1.25rem;max-width:640px">
+    Job boards like Indeed, LinkedIn, CyberCoders, and ZipRecruiter aggregate listings from
+    employers nationwide. They may post jobs listed as &ldquo;Tulsa&rdquo; that are actually
+    remote, hybrid, or require relocation. They generally have no local office or direct
+    relationship with Tulsa-area employers. Use them as a broader search tool, but verify
+    the actual location before applying.
+  </p>
+
+  {% if job_board_companies %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Website</th>
+          <th>Job Board</th>
+          <th>Socials</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for company in job_board_companies %}
+        {% set _fa = {'linkedin':'fa-linkedin','github':'fa-github','facebook':'fa-facebook','instagram':'fa-instagram','twitter/x':'fa-x-twitter','youtube':'fa-youtube','spotify':'fa-spotify','tiktok':'fa-tiktok','pinterest':'fa-pinterest'} %}
+        <tr>
+          <td><a href="/companies/{{ company.slug }}" class="table-link">{{ company.common_name }}</a></td>
+          <td>
+            {% if company.website and (company.website.startswith('http://') or company.website.startswith('https://')) %}
+              <a href="{{ company.website }}" target="_blank" rel="noopener noreferrer" class="table-link">Website</a>
+            {% endif %}
+          </td>
+          <td>
+            {% if company.jobboard and (company.jobboard.startswith('http://') or company.jobboard.startswith('https://')) %}
+              <a href="{{ company.jobboard }}" target="_blank" rel="noopener noreferrer" class="table-link">Job Board</a>
+            {% endif %}
+          </td>
+          <td>
+            <div class="social-icons">
+              {% for social in company.socials | sort(attribute='social_type.name') %}
+                {% if social.is_active and social.company_url and (social.company_url.startswith('http://') or social.company_url.startswith('https://')) %}
+                  {% set _icon = _fa.get(social.social_type.name | lower) %}
+                  {% if _icon %}
+                    <a href="{{ social.company_url }}" target="_blank" rel="noopener noreferrer"
+                       title="{{ social.social_type.name }}" class="social-icon-link">
+                      <i class="fa-brands {{ _icon }}" aria-hidden="true"></i>
+                      <span class="sr-only">{{ social.social_type.name }}</span>
+                    </a>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state__title">No job boards listed</div>
+    <div class="empty-state__text">None have been added yet.</div>
+  </div>
+  {% endif %}
   {% endif %}
 
 </div>

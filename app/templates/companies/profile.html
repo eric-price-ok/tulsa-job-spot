@@ -44,6 +44,13 @@
           </a>
         </div>
       {% endif %}
+      {% if company.jobboard and not company.is_scraped and (company.jobboard.startswith('http://') or company.jobboard.startswith('https://')) %}
+        <div style="margin-top:.5rem">
+          <a href="{{ company.jobboard }}" target="_blank" rel="noopener noreferrer" class="btn btn--outline btn--sm">
+            Visit job board &rarr;
+          </a>
+        </div>
+      {% endif %}
     </div>
   </div>
 

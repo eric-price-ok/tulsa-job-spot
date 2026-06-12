@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="container container--narrow">
+  <div class="page-header">
+    <h1 class="page-header__title">My Profile</h1>
+  </div>
+
+  <div class="form-card" style="max-width:100%">
+
+    {# Avatar + identity — read-only #}
+    <div class="form-section" style="display:flex;align-items:center;gap:1.25rem;padding-bottom:1.5rem;border-bottom:1px solid var(--color-border)">
+      {% if current_user.avatar_url %}
+        <img src="{{ current_user.avatar_url }}" alt=""
+             style="width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0">
+      {% else %}
+        <div style="width:64px;height:64px;border-radius:50%;background:var(--color-bg-alt);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="font-size:1.5rem;color:var(--color-text-muted)">{{ current_user.display_name[0] | upper }}</span>
+        </div>
+      {% endif %}
+      <div>
+        <div class="text-sm text-muted">Signed in with {{ current_user.oauth_provider | title }}</div>
+        <div>{{ current_user.email }}</div>
+        <div class="text-sm text-muted" style="margin-top:0.25rem">Avatar is pulled from your sign-in provider and cannot be changed here.</div>
+      </div>
+    </div>
+
+    {# Editable fields #}
+    <form method="POST" action="/profile">
+      <div class="form-section">
+        <div class="form-group">
+          <label class="form-label" for="display_name">Display Name</label>
+          <input class="form-input" type="text" id="display_name" name="display_name"
+                 value="{{ current_user.full_name or '' }}" maxlength="255"
+                 placeholder="How your name appears on the site">
+          <div class="form-hint">Leave blank to use the part of your email before the @.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="headline">Headline</label>
+          <input class="form-input" type="text" id="headline" name="headline"
+                 value="{{ current_user.headline or '' }}" maxlength="255"
+                 placeholder="e.g. Software Engineer · Tulsa, OK">
+          <div class="form-hint">Optional. A short line shown on your profile.</div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

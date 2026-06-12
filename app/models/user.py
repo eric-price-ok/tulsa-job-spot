@@ -13,6 +13,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     full_name: Mapped[Optional[str]] = mapped_column(String(255))
+    headline: Mapped[Optional[str]] = mapped_column(String(255))
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500))
     oauth_provider: Mapped[str] = mapped_column(String(50), nullable=False)
     oauth_subject: Mapped[str] = mapped_column(String(255), nullable=False)

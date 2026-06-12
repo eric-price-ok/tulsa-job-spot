@@ -38,6 +38,7 @@ from .company import (
 from .job import JobListing, JobListingCertification, JobListingSkill
 from .application import Application, Notification, SavedJob, SavedSearch
 from .scraping import ScrapingLog
+from .settings import SiteSettings
 
 __all__ = [
     "Base",
@@ -81,4 +82,5 @@ __all__ = [
     "SavedJob",
     "SavedSearch",
     "ScrapingLog",
+    "SiteSettings",
 ]

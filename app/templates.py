@@ -25,6 +25,20 @@ def _css_fingerprint() -> str:
 templates.env.globals["css_v"] = _css_fingerprint()
 templates.env.globals["job_url_slug"] = job_url_slug
 
+_recruiters_enabled: bool = False
+
+
+def set_recruiters_enabled(val: bool) -> None:
+    global _recruiters_enabled
+    _recruiters_enabled = val
+
+
+def is_recruiters_enabled() -> bool:
+    return _recruiters_enabled
+
+
+templates.env.globals["recruiters_page_enabled"] = is_recruiters_enabled
+
 
 def _format_phone(value: str | None) -> str:
     if not value:

@@ -30,8 +30,9 @@ from ...models.reference import (
     State,
 )
 from ...models.scraping import ScraperSource, ScrapingLog
+from ...models.settings import SiteSettings
 from ...models.user import User
-from ...templates import templates
+from ...templates import templates, set_recruiters_enabled
 from ...utils import generate_slug, sanitize_url
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -923,3 +924,49 @@ async def import_companies_confirm(
 
     await db.commit()
     return RedirectResponse(f"/admin/import-companies?success={imported}", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Site settings
+# ---------------------------------------------------------------------------
+
+async def _get_or_create_site_settings(db: AsyncSession) -> SiteSettings:
+    row = await db.scalar(select(SiteSettings))
+    if row is None:
+        row = SiteSettings()
+        db.add(row)
+        await db.flush()
+    return row
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def site_settings_form(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    site_settings = await _get_or_create_site_settings(db)
+    await db.commit()
+    return templates.TemplateResponse(
+        request,
+        "admin/settings.html",
+        {
+            "title": "Site Settings",
+            "site_settings": site_settings,
+            "current_user": current_user,
+        },
+    )
+
+
+@router.post("/settings")
+async def site_settings_save(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    form = await request.form()
+    site_settings = await _get_or_create_site_settings(db)
+    site_settings.recruiters_page_enabled = "recruiters_page_enabled" in form
+    await db.commit()
+    set_recruiters_enabled(site_settings.recruiters_page_enabled)
+    return RedirectResponse("/admin/settings?success=saved", status_code=303)

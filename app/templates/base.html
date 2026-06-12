@@ -19,6 +19,9 @@
     <div class="nav__links">
       <a href="/jobs" class="nav__link">Browse Jobs</a>
       <a href="/companies" class="nav__link">Companies</a>
+      {% if recruiters_page_enabled() %}
+        <a href="/recruiters" class="nav__link">Recruiters</a>
+      {% endif %}
       {% if current_user %}
         <a href="/companies/join" class="nav__link">Post a Job</a>
       {% endif %}

@@ -745,6 +745,10 @@ async def company_edit_form(
         .order_by(City.sort_order.nullslast(), City.city_name)
     )).scalars().all()
 
+    site_types = (await db.execute(
+        select(CompanySiteType).where(CompanySiteType.is_active == True).order_by(CompanySiteType.name)
+    )).scalars().all()
+
     return templates.TemplateResponse(
         request,
         "companies/edit.html",
@@ -756,6 +760,7 @@ async def company_edit_form(
             "current_industry_ids": current_industry_ids,
             "social_types": social_types,
             "served_cities": served_cities,
+            "site_types": site_types,
             "current_user": current_user,
         },
     )
@@ -896,6 +901,8 @@ async def company_edit_site_add(
     company_slug: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
+    site_name: Optional[str] = Form(None),
+    site_type_id: Optional[int] = Form(None),
     city_id: Optional[int] = Form(None),
     address1: Optional[str] = Form(None),
     address2: Optional[str] = Form(None),
@@ -906,6 +913,8 @@ async def company_edit_site_add(
     if city_id:
         db.add(CompanySite(
             company_id=company.id,
+            site_name=site_name.strip() if site_name and site_name.strip() else None,
+            site_type=site_type_id or None,
             city_id=city_id,
             address1=address1.strip() if address1 and address1.strip() else None,
             address2=address2.strip() if address2 and address2.strip() else None,

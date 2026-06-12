@@ -547,12 +547,18 @@ async def companies_index(
     request: Request,
     city_id: Optional[str] = None,
     industry_id: Optional[str] = None,
+    function_id: Optional[str] = None,
     page: int = 1,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    city_id = int(city_id) if city_id else None
-    industry_id = int(industry_id) if industry_id else None
+    authenticated = current_user is not None
+
+    # Filters are only honoured for authenticated users
+    city_id = int(city_id) if city_id and authenticated else None
+    industry_id = int(industry_id) if industry_id and authenticated else None
+    function_id = int(function_id) if function_id and authenticated else None
+
     stmt = (
         select(Company)
         .where(Company.approved == True, Company.defunct == False)
@@ -585,6 +591,17 @@ async def companies_index(
             .exists()
         )
 
+    if function_id:
+        stmt = stmt.where(
+            select(CompanyFunction.id)
+            .where(
+                CompanyFunction.company_id == Company.id,
+                CompanyFunction.function_id == function_id,
+            )
+            .correlate(Company)
+            .exists()
+        )
+
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total = await db.scalar(count_stmt) or 0
     total_pages = max(1, math.ceil(total / ITEMS_PER_PAGE))
@@ -593,31 +610,43 @@ async def companies_index(
     stmt = stmt.order_by(Company.common_name).offset((page - 1) * ITEMS_PER_PAGE).limit(ITEMS_PER_PAGE)
     companies = (await db.execute(stmt)).scalars().all()
 
-    city_options = (
-        await db.execute(
-            select(City)
-            .join(CompanySite, CompanySite.city_id == City.id)
-            .join(Company, Company.id == CompanySite.company_id)
-            .where(
-                Company.approved == True,
-                Company.defunct == False,
-                CompanySite.is_active == True,
-                CompanySite.city_id.isnot(None),
+    city_options = []
+    industries = []
+    functions = []
+    if authenticated:
+        city_options = (
+            await db.execute(
+                select(City)
+                .join(CompanySite, CompanySite.city_id == City.id)
+                .join(Company, Company.id == CompanySite.company_id)
+                .where(
+                    Company.approved == True,
+                    Company.defunct == False,
+                    CompanySite.is_active == True,
+                    CompanySite.city_id.isnot(None),
+                )
+                .distinct()
+                .order_by(City.city_name)
             )
-            .distinct()
-            .order_by(City.city_name)
-        )
-    ).scalars().all()
+        ).scalars().all()
 
-    industries = (
-        await db.execute(
-            select(Industry)
-            .where(Industry.is_active == True)
-            .order_by(Industry.name)
-        )
-    ).scalars().all()
+        industries = (
+            await db.execute(
+                select(Industry)
+                .where(Industry.is_active == True)
+                .order_by(Industry.name)
+            )
+        ).scalars().all()
 
-    filters = {"city_id": city_id, "industry_id": industry_id}
+        functions = (
+            await db.execute(
+                select(Function)
+                .where(Function.is_active == True)
+                .order_by(Function.name)
+            )
+        ).scalars().all()
+
+    filters = {"city_id": city_id, "industry_id": industry_id, "function_id": function_id}
 
     ctx = {
         "title": "Browse Companies",
@@ -628,6 +657,8 @@ async def companies_index(
         "filters": filters,
         "city_options": city_options,
         "industries": industries,
+        "functions": functions,
+        "authenticated": authenticated,
         "current_user": current_user,
     }
 

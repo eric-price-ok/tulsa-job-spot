@@ -8,6 +8,7 @@
     <p class="page-header__sub">Local employers on {{ settings.SITE_NAME }}</p>
   </div>
 
+  {% if authenticated %}
   <form id="search-form" method="GET" action="/companies">
     <div class="filter-bar">
       {% if city_options %}
@@ -44,13 +45,35 @@
       </select>
       {% endif %}
 
+      {% if functions %}
+      <select id="function_id" name="function_id" aria-label="Filter by function"
+        hx-get="/companies"
+        hx-target="#company-results"
+        hx-push-url="true"
+        hx-trigger="change"
+        hx-include="#search-form"
+        hx-indicator="#search-spinner">
+        <option value="">All functions</option>
+        {% for fn in functions %}
+        <option value="{{ fn.id }}" {% if filters.function_id == fn.id %}selected{% endif %}>
+          {{ fn.name }}
+        </option>
+        {% endfor %}
+      </select>
+      {% endif %}
+
       <span id="search-spinner" class="htmx-indicator text-muted text-sm">Loading…</span>
 
-      {% if filters.city_id or filters.industry_id %}
+      {% if filters.city_id or filters.industry_id or filters.function_id %}
       <a href="/companies" class="btn btn--ghost btn--sm">Clear filters</a>
       {% endif %}
     </div>
   </form>
+  {% else %}
+  <p class="text-muted text-sm" style="margin-bottom:1.25rem">
+    <a href="/auth/login">Sign in</a> to filter companies by city, industry, and function.
+  </p>
+  {% endif %}
 
   <div id="company-results">
     {% include "partials/company_list.html" %}

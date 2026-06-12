@@ -83,6 +83,7 @@
     {% set base_params = [] %}
     {% if filters.city_id %}{% set _ = base_params.append('city_id=' ~ filters.city_id) %}{% endif %}
     {% if filters.industry_id %}{% set _ = base_params.append('industry_id=' ~ filters.industry_id) %}{% endif %}
+    {% if filters.function_id %}{% set _ = base_params.append('function_id=' ~ filters.function_id) %}{% endif %}
     {% set qstr = base_params | join('&') %}
 
     {% if page > 1 %}
@@ -111,7 +112,7 @@
   <div class="empty-state">
     <div class="empty-state__title">No companies found</div>
     <div class="empty-state__text">
-      {% if filters.city_id or filters.industry_id %}
+      {% if filters.city_id or filters.industry_id or filters.function_id %}
         Try adjusting your filters or <a href="/companies">clear all filters</a>.
       {% else %}
         No companies have been approved yet. Check back soon.

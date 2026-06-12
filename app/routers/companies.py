@@ -18,7 +18,7 @@ from ..models.company import Company, CompanyIndustry, CompanyInvite, CompanySit
 from ..models.job import JobListing
 from ..models.reference import City, CompanySiteType, CompanyType, Industry, JobStatus, SocialMediaType
 from ..models.user import User
-from ..templates import templates
+from ..templates import templates, is_recruiters_enabled
 from ..workers.email import enqueue_email
 
 router = APIRouter(tags=["companies"])
@@ -634,6 +634,68 @@ async def companies_index(
     is_htmx = request.headers.get("HX-Request") == "true"
     template = "partials/company_list.html" if is_htmx else "companies/index.html"
     return templates.TemplateResponse(request, template, ctx)
+
+
+# ---------------------------------------------------------------------------
+# Recruiters page (industry = Recruiting, feature-toggled)
+# ---------------------------------------------------------------------------
+
+@router.get("/recruiters", response_class=HTMLResponse)
+async def recruiters_index(
+    request: Request,
+    page: int = 1,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    if not is_recruiters_enabled():
+        raise HTTPException(status_code=404)
+
+    recruiting_industry_id = await db.scalar(
+        select(Industry.id).where(Industry.name == "Recruiting")
+    )
+
+    stmt = (
+        select(Company)
+        .where(Company.approved == True, Company.defunct == False)
+        .options(
+            selectinload(Company.sites).selectinload(CompanySite.city),
+            selectinload(Company.socials).selectinload(CompanySocial.social_type),
+        )
+    )
+
+    if recruiting_industry_id:
+        stmt = stmt.where(
+            select(CompanyIndustry.id)
+            .where(
+                CompanyIndustry.company_id == Company.id,
+                CompanyIndustry.industry_id == recruiting_industry_id,
+            )
+            .correlate(Company)
+            .exists()
+        )
+    else:
+        stmt = stmt.where(False)
+
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = await db.scalar(count_stmt) or 0
+    total_pages = max(1, math.ceil(total / ITEMS_PER_PAGE))
+    page = max(1, min(page, total_pages))
+
+    stmt = stmt.order_by(Company.common_name).offset((page - 1) * ITEMS_PER_PAGE).limit(ITEMS_PER_PAGE)
+    companies = (await db.execute(stmt)).scalars().all()
+
+    return templates.TemplateResponse(
+        request,
+        "recruiters/index.html",
+        {
+            "title": "Recruiters",
+            "companies": companies,
+            "total": total,
+            "page": page,
+            "total_pages": total_pages,
+            "current_user": current_user,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@ import csv
 import io
 import json
 from datetime import datetime
-from typing import Optional, Type
+from typing import List, Optional, Type
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -972,3 +972,74 @@ async def site_settings_save(
     set_recruiters_enabled(site_settings.recruiters_page_enabled)
     set_job_boards_enabled(site_settings.job_boards_section_enabled)
     return RedirectResponse("/admin/settings?success=saved", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Admin company creation
+# ---------------------------------------------------------------------------
+
+@router.get("/companies/create", response_class=HTMLResponse)
+async def admin_company_create_form(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    company_types = (await db.execute(
+        select(CompanyType).where(CompanyType.is_active == True).order_by(CompanyType.name)
+    )).scalars().all()
+    industries = (await db.execute(
+        select(Industry).where(Industry.is_active == True).order_by(Industry.sort_order, Industry.name)
+    )).scalars().all()
+    return templates.TemplateResponse(
+        request,
+        "admin/companies_create.html",
+        {
+            "title": "Create Company",
+            "company_types": company_types,
+            "industries": industries,
+            "current_user": current_user,
+        },
+    )
+
+
+@router.post("/companies/create")
+async def admin_company_create_submit(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+    common_name: str = Form(...),
+    legal_name: Optional[str] = Form(None),
+    company_type_id: int = Form(...),
+    company_size: Optional[str] = Form(None),
+    website: Optional[str] = Form(None),
+    jobboard: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    industry_ids: Optional[List[int]] = Form(None),
+):
+    common_name = common_name.strip()
+    base_slug = generate_slug(common_name)
+    slug = base_slug
+    counter = 2
+    while await db.scalar(select(Company.id).where(Company.slug == slug)):
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    company = Company(
+        common_name=common_name,
+        legal_name=legal_name.strip() if legal_name and legal_name.strip() else None,
+        slug=slug,
+        company_type=company_type_id,
+        company_size=company_size.strip() if company_size and company_size.strip() else None,
+        website=sanitize_url(website),
+        jobboard=sanitize_url(jobboard),
+        description=description.strip() if description and description.strip() else None,
+        approved=True,
+    )
+    db.add(company)
+    await db.flush()
+
+    if industry_ids:
+        for ind_id in industry_ids:
+            db.add(CompanyIndustry(company_id=company.id, industry_id=ind_id))
+
+    await db.commit()
+    return RedirectResponse(f"/companies/{slug}", status_code=303)

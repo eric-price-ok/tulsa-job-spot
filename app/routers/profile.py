@@ -9,8 +9,8 @@ from sqlalchemy.orm import selectinload
 
 from ..database import get_db
 from ..dependencies import require_user
-from ..models.reference import Certification, Skill
-from ..models.user import User, UserCertification, UserSkill
+from ..models.reference import Certification, DegreeType, Skill
+from ..models.user import User, UserCertification, UserEducation, UserSkill
 from ..templates import templates
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -64,12 +64,31 @@ async def _load_profile_context(user: User, db: AsyncSession) -> dict:
         )
     ).scalars().all()
 
+    user_education = (
+        await db.execute(
+            select(UserEducation)
+            .where(UserEducation.user_id == user.id)
+            .options(selectinload(UserEducation.degree_type))
+            .order_by(UserEducation.is_in_progress.desc(), UserEducation.completion_date.desc())
+        )
+    ).scalars().all()
+
+    degree_types = (
+        await db.execute(
+            select(DegreeType)
+            .where(DegreeType.is_active == True)
+            .order_by(DegreeType.sort_order, DegreeType.name)
+        )
+    ).scalars().all()
+
     return {
         "user_skills": user_skills,
         "all_skills": all_skills,
         "proficiency_levels": PROFICIENCY_LEVELS,
         "user_certs": user_certs,
         "all_certs": all_certs,
+        "user_education": user_education,
+        "degree_types": degree_types,
         "today": date.today(),
     }
 
@@ -285,3 +304,67 @@ async def profile_certs_remove(
         await db.delete(user_cert)
         await db.commit()
     return RedirectResponse("/profile?success=cert_removed", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Education
+# ---------------------------------------------------------------------------
+
+@router.post("/education/add")
+async def profile_education_add(
+    request: Request,
+    current_user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    raw_degree_type_id = form.get("degree_type_id")
+    school_name = (form.get("school_name") or "").strip()
+
+    if not school_name:
+        return RedirectResponse("/profile?error=education_school_required", status_code=303)
+
+    if not raw_degree_type_id:
+        return RedirectResponse("/profile?error=education_degree_required", status_code=303)
+    try:
+        degree_type_id = int(raw_degree_type_id)
+    except ValueError:
+        return RedirectResponse("/profile?error=education_degree_required", status_code=303)
+
+    degree_type = await db.scalar(
+        select(DegreeType).where(DegreeType.id == degree_type_id, DegreeType.is_active == True)
+    )
+    if not degree_type:
+        return RedirectResponse("/profile?error=education_degree_required", status_code=303)
+
+    subject = (form.get("subject_of_study") or "").strip() or None
+    completion_date = _parse_date(form.get("completion_date"))
+    is_in_progress = form.get("is_in_progress") == "true"
+
+    db.add(UserEducation(
+        user_id=current_user.id,
+        degree_type_id=degree_type_id,
+        school_name=school_name,
+        subject_of_study=subject,
+        completion_date=completion_date,
+        is_in_progress=is_in_progress,
+    ))
+    await db.commit()
+    return RedirectResponse("/profile?success=education_added", status_code=303)
+
+
+@router.post("/education/{user_education_id}/remove")
+async def profile_education_remove(
+    user_education_id: int,
+    current_user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    edu = await db.scalar(
+        select(UserEducation).where(
+            UserEducation.id == user_education_id,
+            UserEducation.user_id == current_user.id,
+        )
+    )
+    if edu:
+        await db.delete(edu)
+        await db.commit()
+    return RedirectResponse("/profile?success=education_removed", status_code=303)

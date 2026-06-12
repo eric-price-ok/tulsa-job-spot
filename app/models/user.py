@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -69,3 +69,20 @@ class UserCertification(Base):
 
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
     certification: Mapped["Certification"] = relationship("Certification")
+
+
+class UserEducation(Base):
+    __tablename__ = "user_education"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    degree_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("degree_types.id", ondelete="RESTRICT"), nullable=False)
+    school_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    subject_of_study: Mapped[Optional[str]] = mapped_column(String(255))
+    completion_date: Mapped[Optional[date]] = mapped_column(Date)
+    is_in_progress: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    degree_type: Mapped["DegreeType"] = relationship("DegreeType")

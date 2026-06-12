@@ -68,6 +68,8 @@
         {% elif s == 'skill_removed' %}Skill removed.
         {% elif s == 'cert_added' %}Certification added to your profile.
         {% elif s == 'cert_removed' %}Certification removed.
+        {% elif s == 'education_added' %}Education entry added.
+        {% elif s == 'education_removed' %}Education entry removed.
         {% elif s == 'approved' %}Approved.
         {% elif s == 'rejected' %}Rejected.
         {% elif s == 'promoted' %}User promoted to moderator.
@@ -94,6 +96,8 @@
         {% elif err == 'invalid_cert' %}Invalid certification selection.
         {% elif err == 'cert_already_added' %}That certification is already on your profile.
         {% elif err == 'cert_date_invalid' %}Expiry date must be after obtained date.
+        {% elif err == 'education_school_required' %}Please enter a school name.
+        {% elif err == 'education_degree_required' %}Please select a degree type.
         {% else %}Something went wrong. Please try again.
         {% endif %}
       </div>

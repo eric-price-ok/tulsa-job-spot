@@ -183,6 +183,113 @@
     </div>
   </div>
 
+  {# ── Education ─────────────────────────────────────────────────────────── #}
+  <div class="panel" style="margin-top:2rem">
+    <div class="panel__header">
+      <h2 class="panel__title">Education</h2>
+      <p class="panel__sub">High school, college degrees, trade certificates, and more.</p>
+    </div>
+    <div class="panel__body">
+
+      {% if user_education %}
+        <div class="queue-list" style="margin-bottom:1.5rem">
+          {% for edu in user_education %}
+            <div class="queue-item">
+              <div class="queue-item__main">
+                <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+                  <strong>{{ edu.degree_type.name }}</strong>
+                  {% if edu.is_in_progress %}
+                    <span class="badge badge--new">In Progress</span>
+                  {% endif %}
+                </div>
+                <div>{{ edu.school_name }}</div>
+                <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.2rem">
+                  {% if edu.subject_of_study %}
+                    <span class="text-sm text-muted">{{ edu.subject_of_study }}</span>
+                  {% endif %}
+                  {% if edu.completion_date %}
+                    <span class="text-sm text-muted">
+                      {{ 'Expected' if edu.completion_date > today else 'Graduated' }}
+                      {{ edu.completion_date.strftime('%b %Y') }}
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="queue-item__actions">
+                <form method="POST" action="/profile/education/{{ edu.id }}/remove" style="margin:0"
+                      onsubmit="return confirm('Remove this education entry?')">
+                  <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted text-sm" style="margin-bottom:1.5rem">No education added yet.</p>
+      {% endif %}
+
+      {# Add education form ────────────────────────────────────────────────── #}
+      {% if degree_types %}
+        <div x-data="{ open: false }" style="border-top:1px solid var(--color-border);padding-top:1.25rem">
+          <template x-if="!open">
+            <button type="button" @click="open = true" class="btn btn--outline btn--sm">+ Add Education</button>
+          </template>
+
+          <template x-if="open">
+            <form method="POST" action="/profile/education/add">
+              <h3 class="form-section__title">Add Education</h3>
+
+              <div class="form-group">
+                <label class="form-label" for="edu_school">School / Institution <span class="form-required">*</span></label>
+                <input class="form-input" type="text" id="edu_school" name="school_name"
+                       maxlength="255" placeholder="e.g. University of Tulsa" required>
+              </div>
+
+              <div class="form-grid" style="--form-grid-cols:2">
+                <div class="form-group">
+                  <label class="form-label" for="edu_degree_type">Degree / Certificate <span class="form-required">*</span></label>
+                  <select class="form-select" id="edu_degree_type" name="degree_type_id" required>
+                    <option value="">Select…</option>
+                    {% for dt in degree_types %}
+                      <option value="{{ dt.id }}">{{ dt.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="edu_subject">Field of Study</label>
+                  <input class="form-input" type="text" id="edu_subject" name="subject_of_study"
+                         maxlength="255" placeholder="e.g. Computer Science (optional)">
+                </div>
+              </div>
+
+              <div class="form-grid" style="--form-grid-cols:2">
+                <div class="form-group">
+                  <label class="form-label" for="edu_completion">Completion Date</label>
+                  <input class="form-input" type="date" id="edu_completion" name="completion_date">
+                  <div class="form-hint">Optional. Future dates accepted.</div>
+                </div>
+
+                <div class="form-group" style="display:flex;align-items:center;gap:.5rem;padding-top:1.75rem">
+                  <label class="filter-checkbox">
+                    <input type="checkbox" name="is_in_progress" value="true">
+                    Currently enrolled / in progress
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-actions" style="padding-top:0">
+                <button type="submit" class="btn btn--primary">Add Education</button>
+                <button type="button" @click="open = false" class="btn btn--ghost">Cancel</button>
+              </div>
+            </form>
+          </template>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
   {# ── Certifications ────────────────────────────────────────────────────── #}
   <div class="panel" style="margin-top:2rem">
     <div class="panel__header">

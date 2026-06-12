@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Create Company — Admin{% endblock %}
+
+{% block content %}
+<div class="container container--narrow">
+  <div class="page-header">
+    <a href="/admin" class="text-muted text-sm">← Admin</a>
+    <h1 class="page-header__title">Create Company</h1>
+    <p class="page-header__sub">Company will be created as approved. No moderation required.</p>
+  </div>
+
+  <div class="form-card" style="max-width:100%">
+    <form method="POST" action="/admin/companies/create">
+
+      <div class="form-section">
+        <h2 class="form-section__title">Company Info</h2>
+
+        <div class="form-group">
+          <label class="form-label" for="common_name">Company Name <span class="form-required">*</span></label>
+          <input class="form-input" type="text" id="common_name" name="common_name" required maxlength="255" autofocus>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="legal_name">Legal Name</label>
+          <input class="form-input" type="text" id="legal_name" name="legal_name" maxlength="255">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="company_type_id">Company Type <span class="form-required">*</span></label>
+          <select class="form-select" id="company_type_id" name="company_type_id" required>
+            <option value="">Select a type…</option>
+            {% for ct in company_types %}
+              <option value="{{ ct.id }}">{{ ct.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="company_size">Company Size</label>
+          <input class="form-input" type="text" id="company_size" name="company_size"
+                 maxlength="50" placeholder="e.g. 10–50 employees">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="website">Website</label>
+          <input class="form-input" type="url" id="website" name="website"
+                 maxlength="500" placeholder="https://example.com">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="jobboard">Job Board URL</label>
+          <input class="form-input" type="url" id="jobboard" name="jobboard"
+                 maxlength="500" placeholder="https://example.com/careers">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">About the Company</label>
+          <textarea class="form-textarea" id="description" name="description"
+                    rows="5" maxlength="5000"></textarea>
+        </div>
+      </div>
+
+      {% if industries %}
+      <div class="form-section">
+        <h2 class="form-section__title">Industries</h2>
+        <div class="checkbox-grid">
+          {% for ind in industries %}
+          <label class="filter-checkbox">
+            <input type="checkbox" name="industry_ids" value="{{ ind.id }}">
+            {{ ind.name }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Create Company</button>
+        <a href="/admin" class="btn btn--ghost">Cancel</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

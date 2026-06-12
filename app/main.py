@@ -13,6 +13,7 @@ from .routers.auth import router as auth_router
 from .routers.companies import router as companies_router
 from .routers.jobs import router as jobs_router
 from .routers.moderator import router as moderator_router
+from .routers.profile import router as profile_router
 from .templates import templates
 
 
@@ -78,6 +79,7 @@ app.include_router(jobs_router)
 app.include_router(companies_router)
 app.include_router(moderator_router)
 app.include_router(admin_router)
+app.include_router(profile_router)
 
 
 @app.get("/")

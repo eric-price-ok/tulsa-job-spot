@@ -17,6 +17,7 @@ from ..models.reference import (
     CompanySiteType,
     CompanyType,
     Country,
+    DegreeType,
     Experience,
     Function,
     FunctionSpecialty,
@@ -462,6 +463,20 @@ async def seed(session: AsyncSession):
         if not existing:
             session.add(Skill(name=skill_name, skill_category_id=cat.get(cat_name), is_active=True))
     await session.flush()
+
+    print("Seeding degree types...")
+    await upsert(session, DegreeType, "name", [
+        {"name": "High School Diploma",     "sort_order": 1},
+        {"name": "GED",                     "sort_order": 2},
+        {"name": "Trade / Vocational Certificate", "sort_order": 3},
+        {"name": "Associate's Degree",      "sort_order": 4},
+        {"name": "Bachelor's Degree",       "sort_order": 5},
+        {"name": "Master's Degree",         "sort_order": 6},
+        {"name": "Doctorate (PhD / EdD)",   "sort_order": 7},
+        {"name": "Professional Degree (JD / MD / DDS)", "sort_order": 8},
+        {"name": "Post-Graduate Certificate", "sort_order": 9},
+        {"name": "Bootcamp Certificate",    "sort_order": 10},
+    ])
 
     print("Seeding certification providers...")
     await upsert(session, CertificationProvider, "name", [

@@ -19,6 +19,7 @@ from ...models.reference import (
     City,
     CompanySiteType,
     CompanyType,
+    DegreeType,
     Experience,
     Function,
     FunctionSpecialty,
@@ -50,6 +51,7 @@ _REFERENCE_REGISTRY: dict[str, tuple[type, str]] = {
     "industries":       (Industry,        "Industries"),
     "office-locations": (OfficeLocation,  "Office Locations"),
     "experience":       (Experience,      "Experience Levels"),
+    "degree-types":     (DegreeType,      "Degree Types"),
 }
 
 

@@ -66,6 +66,8 @@
         {% elif s == 'profile_saved' %}Profile updated.
         {% elif s == 'skill_added' %}Skill added to your profile.
         {% elif s == 'skill_removed' %}Skill removed.
+        {% elif s == 'cert_added' %}Certification added to your profile.
+        {% elif s == 'cert_removed' %}Certification removed.
         {% elif s == 'approved' %}Approved.
         {% elif s == 'rejected' %}Rejected.
         {% elif s == 'promoted' %}User promoted to moderator.
@@ -89,6 +91,9 @@
         {% elif err == 'invalid_skill' %}Invalid skill selection.
         {% elif err == 'skill_already_added' %}That skill is already on your profile.
         {% elif err == 'featured_limit' %}You can only feature up to 3 skills. Unfeature one first.
+        {% elif err == 'invalid_cert' %}Invalid certification selection.
+        {% elif err == 'cert_already_added' %}That certification is already on your profile.
+        {% elif err == 'cert_date_invalid' %}Expiry date must be after obtained date.
         {% else %}Something went wrong. Please try again.
         {% endif %}
       </div>

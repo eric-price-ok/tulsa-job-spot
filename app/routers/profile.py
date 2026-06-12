@@ -1,3 +1,6 @@
+from datetime import date
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
@@ -6,13 +9,22 @@ from sqlalchemy.orm import selectinload
 
 from ..database import get_db
 from ..dependencies import require_user
-from ..models.reference import Skill
-from ..models.user import User, UserSkill
+from ..models.reference import Certification, Skill
+from ..models.user import User, UserCertification, UserSkill
 from ..templates import templates
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 PROFICIENCY_LEVELS = ["beginner", "intermediate", "advanced", "expert", "unknown"]
+
+
+def _parse_date(val: str | None) -> date | None:
+    if not val:
+        return None
+    try:
+        return date.fromisoformat(val.strip())
+    except ValueError:
+        return None
 
 
 async def _load_profile_context(user: User, db: AsyncSession) -> dict:
@@ -31,10 +43,34 @@ async def _load_profile_context(user: User, db: AsyncSession) -> dict:
         )
     ).scalars().all()
 
+    user_certs = (
+        await db.execute(
+            select(UserCertification)
+            .where(UserCertification.user_id == user.id)
+            .options(
+                selectinload(UserCertification.certification)
+                .selectinload(Certification.provider)
+            )
+            .order_by(UserCertification.created_at)
+        )
+    ).scalars().all()
+
+    all_certs = (
+        await db.execute(
+            select(Certification)
+            .where(Certification.is_active == True)
+            .options(selectinload(Certification.provider))
+            .order_by(Certification.name)
+        )
+    ).scalars().all()
+
     return {
         "user_skills": user_skills,
         "all_skills": all_skills,
         "proficiency_levels": PROFICIENCY_LEVELS,
+        "user_certs": user_certs,
+        "all_certs": all_certs,
+        "today": date.today(),
     }
 
 
@@ -174,3 +210,78 @@ async def profile_skills_feature(
 
     await db.commit()
     return RedirectResponse("/profile", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Certifications
+# ---------------------------------------------------------------------------
+
+@router.post("/certifications/add")
+async def profile_certs_add(
+    request: Request,
+    current_user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    raw_cert_id = form.get("certification_id")
+
+    if not raw_cert_id:
+        return RedirectResponse("/profile?error=invalid_cert", status_code=303)
+    try:
+        cert_id = int(raw_cert_id)
+    except ValueError:
+        return RedirectResponse("/profile?error=invalid_cert", status_code=303)
+
+    cert = await db.scalar(
+        select(Certification).where(Certification.id == cert_id, Certification.is_active == True)
+    )
+    if not cert:
+        return RedirectResponse("/profile?error=invalid_cert", status_code=303)
+
+    existing = await db.scalar(
+        select(UserCertification).where(
+            UserCertification.user_id == current_user.id,
+            UserCertification.certification_id == cert_id,
+        )
+    )
+    if existing:
+        return RedirectResponse("/profile?error=cert_already_added", status_code=303)
+
+    obtained = _parse_date(form.get("obtained_date"))
+    expiry = _parse_date(form.get("expiry_date"))
+
+    if obtained and expiry and expiry <= obtained:
+        return RedirectResponse("/profile?error=cert_date_invalid", status_code=303)
+
+    credential_id = (form.get("credential_id") or "").strip() or None
+    raw_url = (form.get("credential_url") or "").strip()
+    credential_url = raw_url if raw_url.startswith(("http://", "https://")) else None
+
+    db.add(UserCertification(
+        user_id=current_user.id,
+        certification_id=cert_id,
+        obtained_date=datetime(obtained.year, obtained.month, obtained.day) if obtained else None,
+        expiry_date=datetime(expiry.year, expiry.month, expiry.day) if expiry else None,
+        credential_id=credential_id,
+        credential_url=credential_url,
+    ))
+    await db.commit()
+    return RedirectResponse("/profile?success=cert_added", status_code=303)
+
+
+@router.post("/certifications/{user_cert_id}/remove")
+async def profile_certs_remove(
+    user_cert_id: int,
+    current_user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user_cert = await db.scalar(
+        select(UserCertification).where(
+            UserCertification.id == user_cert_id,
+            UserCertification.user_id == current_user.id,
+        )
+    )
+    if user_cert:
+        await db.delete(user_cert)
+        await db.commit()
+    return RedirectResponse("/profile?success=cert_removed", status_code=303)

@@ -183,6 +183,143 @@
     </div>
   </div>
 
+  {# ── Certifications ────────────────────────────────────────────────────── #}
+  <div class="panel" style="margin-top:2rem">
+    <div class="panel__header">
+      <h2 class="panel__title">Certifications</h2>
+      <p class="panel__sub">Add certifications from the site taxonomy. Expired certs are shown with an indicator.</p>
+    </div>
+    <div class="panel__body">
+
+      {# Existing certs list ─────────────────────────────────────────────── #}
+      {% if user_certs %}
+        <div class="queue-list" style="margin-bottom:1.5rem">
+          {% for uc in user_certs %}
+            {% set is_expired = uc.expiry_date and uc.expiry_date.date() < today %}
+            <div class="queue-item{% if is_expired %} queue-item--stacked{% endif %}">
+              <div class="queue-item__main">
+                <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+                  <strong>{{ uc.certification.name }}</strong>
+                  {% if uc.certification.code %}
+                    <span class="text-muted text-sm">({{ uc.certification.code }})</span>
+                  {% endif %}
+                  {% if is_expired %}
+                    <span class="badge badge--warning">Expired</span>
+                  {% endif %}
+                </div>
+                {% if uc.certification.provider %}
+                  <div class="text-sm text-muted">{{ uc.certification.provider.name }}</div>
+                {% endif %}
+                <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.25rem">
+                  {% if uc.obtained_date %}
+                    <span class="text-sm text-muted">Obtained {{ uc.obtained_date.strftime('%b %Y') }}</span>
+                  {% endif %}
+                  {% if uc.expiry_date %}
+                    <span class="text-sm {% if is_expired %}text-muted{% else %}text-muted{% endif %}">
+                      Expires {{ uc.expiry_date.strftime('%b %Y') }}
+                    </span>
+                  {% endif %}
+                  {% if uc.credential_id %}
+                    <span class="text-sm text-muted">ID: {{ uc.credential_id }}</span>
+                  {% endif %}
+                  {% if uc.credential_url %}
+                    <a href="{{ uc.credential_url }}" target="_blank" rel="noopener noreferrer"
+                       class="text-sm" style="color:var(--color-primary)">View credential ↗</a>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="queue-item__actions">
+                <form method="POST" action="/profile/certifications/{{ uc.id }}/remove" style="margin:0"
+                      onsubmit="return confirm('Remove {{ uc.certification.name }} from your profile?')">
+                  <button type="submit" class="btn btn--ghost btn--sm">Remove</button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted text-sm" style="margin-bottom:1.5rem">No certifications added yet.</p>
+      {% endif %}
+
+      {# Add cert form ────────────────────────────────────────────────────── #}
+      {% if all_certs %}
+        <script id="profile-cert-data" type="application/json">
+          [{% for c in all_certs %}{"id":{{ c.id }},"name":{{ c.name | tojson }},"provider":{{ (c.provider.name if c.provider else '') | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]
+        </script>
+
+        <div x-data="profileCertPicker()" style="border-top:1px solid var(--color-border);padding-top:1.25rem">
+          <h3 class="form-section__title">Add a Certification</h3>
+
+          {# Step 1: search #}
+          <template x-if="!pending">
+            <div class="skill-picker">
+              <div class="skill-tags-row" style="padding:.375rem .625rem">
+                <input type="text" x-model="query" @input="filter()" @keydown.escape="suggestions = []"
+                       @keydown.enter.prevent="suggestions.length && select(suggestions[0])"
+                       class="skill-input" placeholder="Type to search certifications…"
+                       autocomplete="off">
+              </div>
+              <div x-show="suggestions.length > 0" class="skill-dropdown" x-cloak>
+                <template x-for="c in suggestions" :key="c.id">
+                  <button type="button" @click="select(c)" class="skill-dropdown-item">
+                    <span x-text="c.name"></span>
+                    <span x-show="c.provider" x-text="' · ' + c.provider"
+                          style="color:var(--color-text-muted);font-size:.8em"></span>
+                  </button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          {# Step 2: details #}
+          <template x-if="pending">
+            <form method="POST" action="/profile/certifications/add">
+              <input type="hidden" name="certification_id" :value="pending.id">
+
+              <div style="margin-bottom:1rem">
+                <span class="chip" style="display:inline-flex">
+                  <span x-text="pending.name"></span>
+                  <span x-show="pending.provider" x-text="' · ' + pending.provider"
+                        style="opacity:.6;margin-left:.25rem;font-size:.85em"></span>
+                  <button type="button" @click="clear()" class="chip__remove" aria-label="Change">×</button>
+                </span>
+              </div>
+
+              <div class="form-grid" style="--form-grid-cols:2">
+                <div class="form-group">
+                  <label class="form-label" for="cert_obtained">Date Obtained</label>
+                  <input class="form-input" type="date" id="cert_obtained" name="obtained_date">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="cert_expiry">Expiry Date</label>
+                  <input class="form-input" type="date" id="cert_expiry" name="expiry_date">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cert_credential_id">Credential ID</label>
+                <input class="form-input" type="text" id="cert_credential_id" name="credential_id"
+                       maxlength="255" placeholder="e.g. ABC-123456 (optional)">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cert_credential_url">Credential URL</label>
+                <input class="form-input" type="url" id="cert_credential_url" name="credential_url"
+                       maxlength="500" placeholder="https://… (optional)">
+              </div>
+
+              <div class="form-actions" style="padding-top:0">
+                <button type="submit" class="btn btn--primary">Add Certification</button>
+                <button type="button" @click="clear()" class="btn btn--ghost">Cancel</button>
+              </div>
+            </form>
+          </template>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -202,6 +339,26 @@ function profileSkillPicker() {
         .slice(0, 10);
     },
     select(skill) { this.pending = skill; this.query = ''; this.suggestions = []; },
+    clear() { this.pending = null; },
+  };
+}
+
+function profileCertPicker() {
+  const all = JSON.parse(document.getElementById('profile-cert-data').textContent);
+  const taken = new Set({{ user_certs | map(attribute='certification_id') | list | tojson }});
+  return {
+    query: '',
+    pending: null,
+    suggestions: [],
+    filter() {
+      const q = this.query.trim().toLowerCase();
+      if (!q) { this.suggestions = []; return; }
+      this.suggestions = all
+        .filter(c => !taken.has(c.id))
+        .filter(c => c.name.toLowerCase().includes(q) || c.provider.toLowerCase().includes(q))
+        .slice(0, 10);
+    },
+    select(cert) { this.pending = cert; this.query = ''; this.suggestions = []; },
     clear() { this.pending = null; },
   };
 }

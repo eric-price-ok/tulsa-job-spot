@@ -68,3 +68,4 @@ class UserCertification(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    certification: Mapped["Certification"] = relationship("Certification")

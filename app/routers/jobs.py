@@ -625,6 +625,7 @@ async def job_reopen(
     active_status_id = await _get_active_status_id(db)
     job.job_status_id = active_status_id
     job.date_closed = None
+    job.approved = False
     await db.commit()
 
     return RedirectResponse(

@@ -77,7 +77,7 @@
 
                 {% if is_closed %}
                   <form method="POST" action="/jobs/{{ job.id }}/reopen"
-                        onsubmit="return confirm('Reopen this listing? It will become active again and the close date will be cleared.')">
+                        onsubmit="return confirm('Reopen this listing? It will be submitted for moderator review before going live.')">
                     <button type="submit" class="btn btn--ghost btn--sm">Reopen</button>
                   </form>
                 {% endif %}

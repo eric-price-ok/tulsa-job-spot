@@ -507,24 +507,38 @@ async def invite_accept_submit(
 async def company_jobs_dashboard(
     company_slug: str,
     request: Request,
+    q: str = "",
+    status: str = "",
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
     company = await _require_company_admin(company_slug, current_user, db)
 
-    jobs = (
-        await db.execute(
-            select(JobListing)
-            .where(JobListing.company_id == company.id)
-            .options(
-                selectinload(JobListing.job_status),
-                selectinload(JobListing.job_type),
-                selectinload(JobListing.city),
-                selectinload(JobListing.office_location),
-            )
-            .order_by(JobListing.created_at.desc())
+    stmt = (
+        select(JobListing)
+        .where(JobListing.company_id == company.id)
+        .options(
+            selectinload(JobListing.job_status),
+            selectinload(JobListing.job_type),
+            selectinload(JobListing.city),
+            selectinload(JobListing.office_location),
         )
-    ).scalars().all()
+        .order_by(JobListing.created_at.desc())
+    )
+
+    if q.strip():
+        stmt = stmt.where(JobListing.job_title.ilike(f"%{q.strip()}%"))
+
+    if status == "active":
+        active_id = await db.scalar(select(JobStatus.id).where(JobStatus.name == "active"))
+        stmt = stmt.where(JobListing.job_status_id == active_id)
+    elif status == "closed":
+        closed_ids = (
+            await db.execute(select(JobStatus.id).where(JobStatus.name.in_(["closed", "expired"])))
+        ).scalars().all()
+        stmt = stmt.where(JobListing.job_status_id.in_(closed_ids))
+
+    jobs = (await db.execute(stmt)).scalars().all()
 
     return templates.TemplateResponse(
         request,
@@ -533,6 +547,8 @@ async def company_jobs_dashboard(
             "title": f"Job Listings — {company.common_name}",
             "company": company,
             "jobs": jobs,
+            "q": q,
+            "status_filter": status,
             "current_user": current_user,
         },
     )

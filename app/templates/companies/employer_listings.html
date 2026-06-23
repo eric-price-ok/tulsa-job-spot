@@ -7,13 +7,29 @@
     <p class="page-header__sub">{{ company.common_name }}</p>
   </div>
 
-  <div style="margin-bottom:1.5rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
     <a href="/jobs/create?company_id={{ company.id }}" class="btn btn--primary">Post a Job</a>
+
+    <form method="GET" action="/companies/{{ company.slug }}/jobs"
+          style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+      <input class="form-input" style="width:220px" type="text" name="q"
+             value="{{ q }}" placeholder="Search by title…">
+      <select class="form-select" name="status" style="width:auto">
+        <option value="" {{ 'selected' if not status_filter }}>All listings</option>
+        <option value="active" {{ 'selected' if status_filter == 'active' }}>Active only</option>
+        <option value="closed" {{ 'selected' if status_filter == 'closed' }}>Closed only</option>
+      </select>
+      <button type="submit" class="btn btn--outline">Filter</button>
+      {% if q or status_filter %}
+        <a href="/companies/{{ company.slug }}/jobs" class="btn btn--ghost">Clear</a>
+      {% endif %}
+    </form>
   </div>
 
   {% if jobs %}
     <div class="queue-list">
       {% for job in jobs %}
+        {% set is_closed = job.job_status and job.job_status.name in ('closed', 'expired') %}
         {% set status_label %}
           {% if not job.approved %}pending approval
           {% elif job.job_status and job.job_status.name == 'closed' %}closed
@@ -51,12 +67,26 @@
 
               <div class="queue-actions">
                 <a href="/jobs/{{ job.id }}/edit" class="btn btn--outline btn--sm">Edit</a>
+
                 {% if job.job_status and job.job_status.name == 'active' %}
                   <form method="POST" action="/jobs/{{ job.id }}/close"
                         onsubmit="return confirm('Close this listing? It will no longer appear in search results.')">
                     <button type="submit" class="btn btn--ghost btn--sm">Close</button>
                   </form>
                 {% endif %}
+
+                {% if is_closed %}
+                  <form method="POST" action="/jobs/{{ job.id }}/reopen"
+                        onsubmit="return confirm('Reopen this listing? It will become active again and the close date will be cleared.')">
+                    <button type="submit" class="btn btn--ghost btn--sm">Reopen</button>
+                  </form>
+                {% endif %}
+
+                <form method="POST" action="/jobs/{{ job.id }}/duplicate"
+                      onsubmit="return confirm('Duplicate this listing? A copy will be created and opened for editing.')">
+                  <button type="submit" class="btn btn--ghost btn--sm">Duplicate</button>
+                </form>
+
                 <a href="/jobs/{{ job_url_slug(job.id, job.job_title) }}" class="btn btn--ghost btn--sm" target="_blank">View</a>
               </div>
             </div>
@@ -66,9 +96,14 @@
     </div>
   {% else %}
     <div class="empty-state">
-      <p class="empty-state__title">No listings yet</p>
-      <p class="empty-state__text">Post your first job to get started.</p>
-      <a href="/jobs/create?company_id={{ company.id }}" class="btn btn--primary mt-3">Post a Job</a>
+      {% if q or status_filter %}
+        <p class="empty-state__title">No listings match your filters</p>
+        <a href="/companies/{{ company.slug }}/jobs" class="btn btn--ghost mt-3">Clear filters</a>
+      {% else %}
+        <p class="empty-state__title">No listings yet</p>
+        <p class="empty-state__text">Post your first job to get started.</p>
+        <a href="/jobs/create?company_id={{ company.id }}" class="btn btn--primary mt-3">Post a Job</a>
+      {% endif %}
     </div>
   {% endif %}
 </div>

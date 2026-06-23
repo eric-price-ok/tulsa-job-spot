@@ -606,6 +606,130 @@ async def job_close(
 
 
 # ---------------------------------------------------------------------------
+# Reopen job listing
+# ---------------------------------------------------------------------------
+
+@router.post("/jobs/{job_id}/reopen")
+async def job_reopen(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    job = await db.get(JobListing, job_id)
+    if job is None:
+        raise HTTPException(status_code=404)
+
+    company = await _require_poster_role(job.company_id, current_user, db)
+    company_slug = company.slug
+
+    active_status_id = await _get_active_status_id(db)
+    job.job_status_id = active_status_id
+    job.date_closed = None
+    await db.commit()
+
+    return RedirectResponse(
+        f"/companies/{company_slug}/jobs", status_code=303
+    )
+
+
+# ---------------------------------------------------------------------------
+# Duplicate job listing
+# ---------------------------------------------------------------------------
+
+@router.post("/jobs/{job_id}/duplicate")
+async def job_duplicate(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    job = (
+        await db.execute(
+            select(JobListing)
+            .where(JobListing.id == job_id)
+            .options(
+                selectinload(JobListing.skills),
+                selectinload(JobListing.certifications),
+            )
+        )
+    ).scalar_one_or_none()
+    if job is None:
+        raise HTTPException(status_code=404)
+
+    await _require_poster_role(job.company_id, current_user, db)
+
+    active_status_id = await _get_active_status_id(db)
+
+    new_job = JobListing(
+        company_id=job.company_id,
+        posted_by=current_user.id,
+        job_title=job.job_title,
+        job_description=job.job_description,
+        posting_url=job.posting_url,
+        application_method=job.application_method,
+        application_email=job.application_email,
+        date_posted=date.today(),
+        date_closed=None,
+        perpetual=job.perpetual,
+        approved=False,
+        job_status_id=active_status_id,
+        function=job.function,
+        specialty=job.specialty,
+        job_type_id=job.job_type_id,
+        experience_id=job.experience_id,
+        experience_years_min=job.experience_years_min,
+        experience_years_max=job.experience_years_max,
+        office_location_id=job.office_location_id,
+        city_id=job.city_id,
+        minimum_salary=job.minimum_salary,
+        maximum_salary=job.maximum_salary,
+        pay_frequency=job.pay_frequency,
+        associate_degree=job.associate_degree,
+        bachelors_degree=job.bachelors_degree,
+        masters_degree=job.masters_degree,
+        doctorate_degree=job.doctorate_degree,
+        first_shift=job.first_shift,
+        second_shift=job.second_shift,
+        third_shift=job.third_shift,
+        rotating_shift=job.rotating_shift,
+        flexible_schedule=job.flexible_schedule,
+        weekends_required=job.weekends_required,
+        evenings_required=job.evenings_required,
+        holidays_required=job.holidays_required,
+        travel_requirements=job.travel_requirements,
+        travel_percentage=job.travel_percentage,
+        is_temporary=job.is_temporary,
+        is_seasonal=job.is_seasonal,
+        is_volunteer=job.is_volunteer,
+        is_individual_contributor=job.is_individual_contributor,
+        is_people_manager=job.is_people_manager,
+    )
+    db.add(new_job)
+    await db.flush()
+
+    for skill in job.skills:
+        db.add(JobListingSkill(
+            job_listing_id=new_job.id,
+            skill_id=skill.skill_id,
+            required_skill=skill.required_skill,
+            preferred_skill=skill.preferred_skill,
+            extraction_method="manual",
+        ))
+
+    for cert in job.certifications:
+        db.add(JobListingCertification(
+            job_listing_id=new_job.id,
+            certification_id=cert.certification_id,
+            is_required=cert.is_required,
+            is_preferred=cert.is_preferred,
+            extraction_method="manual",
+        ))
+
+    await db.commit()
+
+    return RedirectResponse(f"/jobs/{new_job.id}/edit", status_code=303)
+
+
+# ---------------------------------------------------------------------------
 # Browse (anonymous)
 # ---------------------------------------------------------------------------
 

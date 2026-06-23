@@ -19,6 +19,7 @@ from ..dependencies import get_current_user, require_user
 from ..models.company import Company, UserCompanyRole
 from ..models.job import JobListing, JobListingCertification, JobListingSkill
 from ..models.reference import (
+    Certification,
     City,
     Experience,
     Function,
@@ -37,6 +38,9 @@ router = APIRouter(tags=["jobs"])
 ITEMS_PER_PAGE = settings.ITEMS_PER_PAGE
 
 PAY_FREQUENCIES = ["hourly", "daily", "weekly", "biweekly", "monthly", "annually"]
+DEGREE_OPTIONS = ["not_mentioned", "preferred", "required"]
+TIME_REQUIREMENT_OPTIONS = ["not_mentioned", "occasional", "required"]
+TRAVEL_OPTIONS = ["not_mentioned", "none", "minimal", "moderate", "extensive", "constant"]
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +116,11 @@ async def _load_form_data(db: AsyncSession) -> dict:
             select(Skill).where(Skill.is_active == True).order_by(Skill.name)
         )
     ).scalars().all()
+    certifications = (
+        await db.execute(
+            select(Certification).where(Certification.is_active == True).order_by(Certification.name)
+        )
+    ).scalars().all()
 
     return {
         "served_cities": served_cities,
@@ -120,7 +129,11 @@ async def _load_form_data(db: AsyncSession) -> dict:
         "office_locations": office_locations,
         "experience_levels": experience_levels,
         "skills": skills,
+        "certifications": certifications,
         "pay_frequencies": PAY_FREQUENCIES,
+        "degree_options": DEGREE_OPTIONS,
+        "time_requirement_options": TIME_REQUIREMENT_OPTIONS,
+        "travel_options": TRAVEL_OPTIONS,
     }
 
 
@@ -234,11 +247,34 @@ async def job_create_submit(
     function_id: Optional[int] = Form(None),
     specialty_id: Optional[int] = Form(None),
     experience_id: Optional[int] = Form(None),
+    experience_years_min: Optional[int] = Form(None),
+    experience_years_max: Optional[int] = Form(None),
     minimum_salary: Optional[str] = Form(None),
     maximum_salary: Optional[str] = Form(None),
     pay_frequency: Optional[str] = Form(None),
     date_closed: Optional[str] = Form(None),
+    perpetual: Optional[str] = Form(None),
+    associate_degree: Optional[str] = Form(None),
+    bachelors_degree: Optional[str] = Form(None),
+    masters_degree: Optional[str] = Form(None),
+    doctorate_degree: Optional[str] = Form(None),
+    first_shift: Optional[str] = Form(None),
+    second_shift: Optional[str] = Form(None),
+    third_shift: Optional[str] = Form(None),
+    rotating_shift: Optional[str] = Form(None),
+    flexible_schedule: Optional[str] = Form(None),
+    weekends_required: Optional[str] = Form(None),
+    evenings_required: Optional[str] = Form(None),
+    holidays_required: Optional[str] = Form(None),
+    travel_requirements: Optional[str] = Form(None),
+    travel_percentage: Optional[int] = Form(None),
+    is_temporary: Optional[str] = Form(None),
+    is_seasonal: Optional[str] = Form(None),
+    is_volunteer: Optional[str] = Form(None),
+    is_individual_contributor: Optional[str] = Form(None),
+    is_people_manager: Optional[str] = Form(None),
     skill_ids: List[int] = Form(default=[]),
+    certification_ids: List[int] = Form(default=[]),
 ):
     company = await _require_poster_role(company_id, current_user, db)
     company_slug = company.slug
@@ -283,11 +319,33 @@ async def job_create_submit(
         function=function_id or None,
         specialty=specialty_id or None,
         experience_id=experience_id or None,
+        experience_years_min=experience_years_min,
+        experience_years_max=experience_years_max,
         minimum_salary=parse_salary(minimum_salary),
         maximum_salary=parse_salary(maximum_salary),
         pay_frequency=pay_frequency if pay_frequency in PAY_FREQUENCIES else None,
         date_closed=parse_date(date_closed),
         date_posted=date.today(),
+        perpetual=bool(perpetual),
+        associate_degree=associate_degree if associate_degree in DEGREE_OPTIONS else "not_mentioned",
+        bachelors_degree=bachelors_degree if bachelors_degree in DEGREE_OPTIONS else "not_mentioned",
+        masters_degree=masters_degree if masters_degree in DEGREE_OPTIONS else "not_mentioned",
+        doctorate_degree=doctorate_degree if doctorate_degree in DEGREE_OPTIONS else "not_mentioned",
+        first_shift=bool(first_shift),
+        second_shift=bool(second_shift),
+        third_shift=bool(third_shift),
+        rotating_shift=bool(rotating_shift),
+        flexible_schedule=bool(flexible_schedule),
+        weekends_required=weekends_required if weekends_required in TIME_REQUIREMENT_OPTIONS else "not_mentioned",
+        evenings_required=evenings_required if evenings_required in TIME_REQUIREMENT_OPTIONS else "not_mentioned",
+        holidays_required=holidays_required if holidays_required in TIME_REQUIREMENT_OPTIONS else "not_mentioned",
+        travel_requirements=travel_requirements if travel_requirements in TRAVEL_OPTIONS else "not_mentioned",
+        travel_percentage=travel_percentage,
+        is_temporary=bool(is_temporary),
+        is_seasonal=bool(is_seasonal),
+        is_volunteer=bool(is_volunteer),
+        is_individual_contributor=bool(is_individual_contributor),
+        is_people_manager=bool(is_people_manager),
         approved=False,
         job_status_id=active_status_id,
     )
@@ -299,6 +357,14 @@ async def job_create_submit(
             job_listing_id=job.id,
             skill_id=skill_id,
             required_skill=True,
+            extraction_method="manual",
+        ))
+
+    for cert_id in set(certification_ids):
+        db.add(JobListingCertification(
+            job_listing_id=job.id,
+            certification_id=cert_id,
+            is_required=True,
             extraction_method="manual",
         ))
 
@@ -336,6 +402,7 @@ async def job_edit_form(
             .where(JobListing.id == job_id)
             .options(
                 selectinload(JobListing.skills).selectinload(JobListingSkill.skill),
+                selectinload(JobListing.certifications).selectinload(JobListingCertification.certification),
             )
         )
     ).scalar_one_or_none()
@@ -381,11 +448,35 @@ async def job_edit_submit(
     function_id: Optional[int] = Form(None),
     specialty_id: Optional[int] = Form(None),
     experience_id: Optional[int] = Form(None),
+    experience_years_min: Optional[int] = Form(None),
+    experience_years_max: Optional[int] = Form(None),
     minimum_salary: Optional[str] = Form(None),
     maximum_salary: Optional[str] = Form(None),
     pay_frequency: Optional[str] = Form(None),
+    date_posted: Optional[str] = Form(None),
     date_closed: Optional[str] = Form(None),
+    perpetual: Optional[str] = Form(None),
+    associate_degree: Optional[str] = Form(None),
+    bachelors_degree: Optional[str] = Form(None),
+    masters_degree: Optional[str] = Form(None),
+    doctorate_degree: Optional[str] = Form(None),
+    first_shift: Optional[str] = Form(None),
+    second_shift: Optional[str] = Form(None),
+    third_shift: Optional[str] = Form(None),
+    rotating_shift: Optional[str] = Form(None),
+    flexible_schedule: Optional[str] = Form(None),
+    weekends_required: Optional[str] = Form(None),
+    evenings_required: Optional[str] = Form(None),
+    holidays_required: Optional[str] = Form(None),
+    travel_requirements: Optional[str] = Form(None),
+    travel_percentage: Optional[int] = Form(None),
+    is_temporary: Optional[str] = Form(None),
+    is_seasonal: Optional[str] = Form(None),
+    is_volunteer: Optional[str] = Form(None),
+    is_individual_contributor: Optional[str] = Form(None),
+    is_people_manager: Optional[str] = Form(None),
     skill_ids: List[int] = Form(default=[]),
+    certification_ids: List[int] = Form(default=[]),
 ):
     job = await db.get(JobListing, job_id)
     if job is None:
@@ -421,10 +512,33 @@ async def job_edit_submit(
     job.function = function_id or None
     job.specialty = specialty_id or None
     job.experience_id = experience_id or None
+    job.experience_years_min = experience_years_min
+    job.experience_years_max = experience_years_max
     job.minimum_salary = parse_salary(minimum_salary)
     job.maximum_salary = parse_salary(maximum_salary)
     job.pay_frequency = pay_frequency if pay_frequency in PAY_FREQUENCIES else None
+    job.date_posted = parse_date(date_posted) or job.date_posted
     job.date_closed = parse_date(date_closed)
+    job.perpetual = bool(perpetual)
+    job.associate_degree = associate_degree if associate_degree in DEGREE_OPTIONS else "not_mentioned"
+    job.bachelors_degree = bachelors_degree if bachelors_degree in DEGREE_OPTIONS else "not_mentioned"
+    job.masters_degree = masters_degree if masters_degree in DEGREE_OPTIONS else "not_mentioned"
+    job.doctorate_degree = doctorate_degree if doctorate_degree in DEGREE_OPTIONS else "not_mentioned"
+    job.first_shift = bool(first_shift)
+    job.second_shift = bool(second_shift)
+    job.third_shift = bool(third_shift)
+    job.rotating_shift = bool(rotating_shift)
+    job.flexible_schedule = bool(flexible_schedule)
+    job.weekends_required = weekends_required if weekends_required in TIME_REQUIREMENT_OPTIONS else "not_mentioned"
+    job.evenings_required = evenings_required if evenings_required in TIME_REQUIREMENT_OPTIONS else "not_mentioned"
+    job.holidays_required = holidays_required if holidays_required in TIME_REQUIREMENT_OPTIONS else "not_mentioned"
+    job.travel_requirements = travel_requirements if travel_requirements in TRAVEL_OPTIONS else "not_mentioned"
+    job.travel_percentage = travel_percentage
+    job.is_temporary = bool(is_temporary)
+    job.is_seasonal = bool(is_seasonal)
+    job.is_volunteer = bool(is_volunteer)
+    job.is_individual_contributor = bool(is_individual_contributor)
+    job.is_people_manager = bool(is_people_manager)
 
     # Replace skills
     for skill in (
@@ -439,6 +553,22 @@ async def job_edit_submit(
             job_listing_id=job.id,
             skill_id=skill_id,
             required_skill=True,
+            extraction_method="manual",
+        ))
+
+    # Replace certifications
+    for cert in (
+        await db.execute(
+            select(JobListingCertification).where(JobListingCertification.job_listing_id == job_id)
+        )
+    ).scalars().all():
+        await db.delete(cert)
+
+    for cert_id in set(certification_ids):
+        db.add(JobListingCertification(
+            job_listing_id=job.id,
+            certification_id=cert_id,
+            is_required=True,
             extraction_method="manual",
         ))
 

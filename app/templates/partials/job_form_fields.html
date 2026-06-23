@@ -121,6 +121,22 @@
     </div>
 
     <div class="form-group">
+      <label class="form-label" for="experience_years_min">Min Years Experience</label>
+      <input class="form-input" id="experience_years_min" name="experience_years_min" type="number"
+             min="0" max="50" step="1"
+             value="{{ job.experience_years_min if job and job.experience_years_min is not none else '' }}"
+             placeholder="e.g. 2">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="experience_years_max">Max Years Experience</label>
+      <input class="form-input" id="experience_years_max" name="experience_years_max" type="number"
+             min="0" max="50" step="1"
+             value="{{ job.experience_years_max if job and job.experience_years_max is not none else '' }}"
+             placeholder="e.g. 5">
+    </div>
+
+    <div class="form-group">
       <label class="form-label" for="function_id">Job Function</label>
       <select class="form-select" id="function_id" name="function_id"
               hx-get="/jobs/specialties"
@@ -190,6 +206,14 @@
       </select>
     </div>
 
+    {% if job %}
+    <div class="form-group">
+      <label class="form-label" for="date_posted">Date Posted</label>
+      <input class="form-input" id="date_posted" name="date_posted" type="date"
+             value="{{ job.date_posted.isoformat() if job.date_posted else '' }}">
+    </div>
+    {% endif %}
+
     <div class="form-group">
       <label class="form-label" for="date_closed">Listing Expires</label>
       <input class="form-input" id="date_closed" name="date_closed" type="date"
@@ -197,6 +221,191 @@
       <p class="form-hint">Leave blank for no expiry.</p>
     </div>
 
+    <div class="form-group">
+      <label class="radio-label">
+        <input type="checkbox" name="perpetual" value="1"
+               {{ 'checked' if job and job.perpetual }}>
+        Perpetual listing <span class="text-muted text-sm">(never expires)</span>
+      </label>
+    </div>
+
+  </div>
+</div>
+
+{# ── Education Requirements ──────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">Education Requirements <span class="text-muted text-sm">(optional)</span></h3>
+
+  <div class="form-grid">
+
+    <div class="form-group">
+      <label class="form-label" for="associate_degree">Associate Degree</label>
+      <select class="form-select" id="associate_degree" name="associate_degree">
+        <option value="not_mentioned" {{ 'selected' if not job or job.associate_degree == 'not_mentioned' }}>Not Mentioned</option>
+        <option value="preferred" {{ 'selected' if job and job.associate_degree == 'preferred' }}>Preferred</option>
+        <option value="required" {{ 'selected' if job and job.associate_degree == 'required' }}>Required</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="bachelors_degree">Bachelor's Degree</label>
+      <select class="form-select" id="bachelors_degree" name="bachelors_degree">
+        <option value="not_mentioned" {{ 'selected' if not job or job.bachelors_degree == 'not_mentioned' }}>Not Mentioned</option>
+        <option value="preferred" {{ 'selected' if job and job.bachelors_degree == 'preferred' }}>Preferred</option>
+        <option value="required" {{ 'selected' if job and job.bachelors_degree == 'required' }}>Required</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="masters_degree">Master's Degree</label>
+      <select class="form-select" id="masters_degree" name="masters_degree">
+        <option value="not_mentioned" {{ 'selected' if not job or job.masters_degree == 'not_mentioned' }}>Not Mentioned</option>
+        <option value="preferred" {{ 'selected' if job and job.masters_degree == 'preferred' }}>Preferred</option>
+        <option value="required" {{ 'selected' if job and job.masters_degree == 'required' }}>Required</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="doctorate_degree">Doctorate</label>
+      <select class="form-select" id="doctorate_degree" name="doctorate_degree">
+        <option value="not_mentioned" {{ 'selected' if not job or job.doctorate_degree == 'not_mentioned' }}>Not Mentioned</option>
+        <option value="preferred" {{ 'selected' if job and job.doctorate_degree == 'preferred' }}>Preferred</option>
+        <option value="required" {{ 'selected' if job and job.doctorate_degree == 'required' }}>Required</option>
+      </select>
+    </div>
+
+  </div>
+</div>
+
+{# ── Work Schedule ─────────────────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">Work Schedule <span class="text-muted text-sm">(optional)</span></h3>
+
+  <div class="radio-group">
+    <label class="radio-label">
+      <input type="checkbox" name="first_shift" value="1"
+             {{ 'checked' if job and job.first_shift }}>
+      First shift (days)
+    </label>
+    <label class="radio-label">
+      <input type="checkbox" name="second_shift" value="1"
+             {{ 'checked' if job and job.second_shift }}>
+      Second shift (evenings)
+    </label>
+    <label class="radio-label">
+      <input type="checkbox" name="third_shift" value="1"
+             {{ 'checked' if job and job.third_shift }}>
+      Third shift (nights)
+    </label>
+    <label class="radio-label">
+      <input type="checkbox" name="rotating_shift" value="1"
+             {{ 'checked' if job and job.rotating_shift }}>
+      Rotating shift
+    </label>
+    <label class="radio-label">
+      <input type="checkbox" name="flexible_schedule" value="1"
+             {{ 'checked' if job and job.flexible_schedule }}>
+      Flexible schedule
+    </label>
+  </div>
+</div>
+
+{# ── Time Requirements ─────────────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">Time Requirements <span class="text-muted text-sm">(optional)</span></h3>
+
+  <div class="form-grid">
+
+    <div class="form-group">
+      <label class="form-label" for="weekends_required">Weekends</label>
+      <select class="form-select" id="weekends_required" name="weekends_required">
+        <option value="not_mentioned" {{ 'selected' if not job or job.weekends_required == 'not_mentioned' }}>Not Mentioned</option>
+        <option value="occasional" {{ 'selected' if job and job.weekends_required == 'occasional' }}>Occasional</option>
+        <option value="required" {{ 'selected' if job and job.weekends_required == 'required' }}>Required</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="evenings_required">Evenings</label>
+      <select class="form-select" id="evenings_required" name="evenings_required">
+        <option value="not_mentioned" {{ 'selected' if not job or job.evenings_required == 'not_mentioned' }}>Not Mentioned</option>
+        <option value="occasional" {{ 'selected' if job and job.evenings_required == 'occasional' }}>Occasional</option>
+        <option value="required" {{ 'selected' if job and job.evenings_required == 'required' }}>Required</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="holidays_required">Holidays</label>
+      <select class="form-select" id="holidays_required" name="holidays_required">
+        <option value="not_mentioned" {{ 'selected' if not job or job.holidays_required == 'not_mentioned' }}>Not Mentioned</option>
+        <option value="occasional" {{ 'selected' if job and job.holidays_required == 'occasional' }}>Occasional</option>
+        <option value="required" {{ 'selected' if job and job.holidays_required == 'required' }}>Required</option>
+      </select>
+    </div>
+
+  </div>
+</div>
+
+{# ── Travel ────────────────────────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">Travel <span class="text-muted text-sm">(optional)</span></h3>
+
+  <div class="form-grid">
+
+    <div class="form-group">
+      <label class="form-label" for="travel_requirements">Travel Requirements</label>
+      <select class="form-select" id="travel_requirements" name="travel_requirements">
+        <option value="not_mentioned" {{ 'selected' if not job or job.travel_requirements == 'not_mentioned' }}>Not Mentioned</option>
+        <option value="none" {{ 'selected' if job and job.travel_requirements == 'none' }}>No Travel</option>
+        <option value="minimal" {{ 'selected' if job and job.travel_requirements == 'minimal' }}>Minimal</option>
+        <option value="moderate" {{ 'selected' if job and job.travel_requirements == 'moderate' }}>Moderate</option>
+        <option value="extensive" {{ 'selected' if job and job.travel_requirements == 'extensive' }}>Extensive</option>
+        <option value="constant" {{ 'selected' if job and job.travel_requirements == 'constant' }}>Constant</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="travel_percentage">Travel Percentage</label>
+      <input class="form-input" id="travel_percentage" name="travel_percentage" type="number"
+             min="0" max="100" step="5"
+             value="{{ job.travel_percentage if job and job.travel_percentage is not none else '' }}"
+             placeholder="e.g. 25">
+      <p class="form-hint">Approximate % of time traveling.</p>
+    </div>
+
+  </div>
+</div>
+
+{# ── Additional Details ────────────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">Additional Details <span class="text-muted text-sm">(optional)</span></h3>
+
+  <div class="radio-group">
+    <label class="radio-label">
+      <input type="checkbox" name="is_temporary" value="1"
+             {{ 'checked' if job and job.is_temporary }}>
+      Temporary position
+    </label>
+    <label class="radio-label">
+      <input type="checkbox" name="is_seasonal" value="1"
+             {{ 'checked' if job and job.is_seasonal }}>
+      Seasonal position
+    </label>
+    <label class="radio-label">
+      <input type="checkbox" name="is_volunteer" value="1"
+             {{ 'checked' if job and job.is_volunteer }}>
+      Volunteer / unpaid
+    </label>
+    <label class="radio-label">
+      <input type="checkbox" name="is_individual_contributor" value="1"
+             {{ 'checked' if job and job.is_individual_contributor }}>
+      Individual contributor role
+    </label>
+    <label class="radio-label">
+      <input type="checkbox" name="is_people_manager" value="1"
+             {{ 'checked' if job and job.is_people_manager }}>
+      People manager role
+    </label>
   </div>
 </div>
 
@@ -239,6 +448,47 @@
     </div>
     <template x-for="skill in selected" :key="skill.id">
       <input type="hidden" name="skill_ids" :value="skill.id">
+    </template>
+  </div>
+</div>
+
+{# ── Certifications ───────────────────────────────────────────── #}
+<div class="form-section">
+  <h3 class="form-section__title">Certifications <span class="text-muted text-sm">(optional)</span></h3>
+
+  <script id="cert-data" type="application/json">
+    [{% for c in certifications %}{"id":{{ c.id }},"name":{{ c.name | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]
+  </script>
+
+  <script id="selected-cert-data" type="application/json">
+    {% if job and job.certifications %}
+      [{% for jc in job.certifications %}{"id":{{ jc.certification_id }},"name":{{ jc.certification.name | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]
+    {% else %}
+      []
+    {% endif %}
+  </script>
+
+  <div x-data="certPicker()" class="skill-picker">
+    <div class="skill-tags-row">
+      <template x-for="cert in selected" :key="cert.id">
+        <span class="chip">
+          <span x-text="cert.name"></span>
+          <button type="button" @click="remove(cert.id)" class="chip__remove" aria-label="Remove">×</button>
+        </span>
+      </template>
+      <input type="text" x-model="query" @input="filter()" @keydown.escape="suggestions = []"
+             @keydown.enter.prevent="suggestions.length && add(suggestions[0])"
+             class="skill-input" placeholder="Type to search certifications…"
+             autocomplete="off">
+    </div>
+    <div x-show="suggestions.length > 0" class="skill-dropdown" x-cloak>
+      <template x-for="cert in suggestions" :key="cert.id">
+        <button type="button" @click="add(cert)" x-text="cert.name"
+                class="skill-dropdown-item"></button>
+      </template>
+    </div>
+    <template x-for="cert in selected" :key="cert.id">
+      <input type="hidden" name="certification_ids" :value="cert.id">
     </template>
   </div>
 </div>

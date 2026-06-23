@@ -49,5 +49,24 @@ function skillPicker() {
     remove(id) { this.selected = this.selected.filter(s => s.id !== id); },
   };
 }
+function certPicker() {
+  const allCerts = JSON.parse(document.getElementById('cert-data').textContent);
+  const preSelected = JSON.parse(document.getElementById('selected-cert-data').textContent);
+  return {
+    query: '',
+    selected: preSelected,
+    suggestions: [],
+    filter() {
+      const q = this.query.trim().toLowerCase();
+      if (!q) { this.suggestions = []; return; }
+      this.suggestions = allCerts
+        .filter(c => !this.selected.find(x => x.id === c.id))
+        .filter(c => c.name.toLowerCase().includes(q))
+        .slice(0, 10);
+    },
+    add(cert) { this.selected.push(cert); this.query = ''; this.suggestions = []; },
+    remove(id) { this.selected = this.selected.filter(c => c.id !== id); },
+  };
+}
 </script>
 {% endblock %}
